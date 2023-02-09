@@ -1,0 +1,10 @@
+{
+  "name": "gate-seal",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Azat Serikov <azatsdev@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "hardhat": "^2.12.6"
+  }
+}
