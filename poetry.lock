@@ -39,7 +39,7 @@ python-versions = "*"
 
 [[package]]
 name = "asttokens"
-version = "2.2.1"
+version = "2.0.5"
 description = "Annotate AST trees with source code positions"
 category = "main"
 optional = false
@@ -1322,15 +1322,15 @@ sqlcipher = ["sqlcipher3-binary"]
 
 [[package]]
 name = "stack-data"
-version = "0.6.2"
+version = "0.5.1"
 description = "Extract data from python stack frames and tracebacks for informative displays"
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
-asttokens = ">=2.1.0"
-executing = ">=1.2.0"
+asttokens = "*"
+executing = "*"
 pure-eval = "*"
 
 [package.extras]
@@ -1431,6 +1431,25 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "vyper"
+version = "0.3.7"
+description = "Vyper: the Pythonic Programming Language for the EVM"
+category = "main"
+optional = false
+python-versions = ">=3.7,<3.11"
+
+[package.dependencies]
+asttokens = "2.0.5"
+pycryptodome = ">=3.5.1,<4"
+semantic-version = ">=2.10,<3"
+
+[package.extras]
+dev = ["pytest (>=6.2.5,<7.0)", "pytest-cov (>=2.10,<3.0)", "pytest-instafail (>=0.4,<1.0)", "pytest-xdist (>=2.5,<3.0)", "pytest-split (>=0.7.0,<1.0)", "pytest-rerunfailures (>=10.2,<11)", "eth-tester[py-evm] (>=0.6.0b6,<0.7)", "py-evm (>=0.5.0a3,<0.6)", "web3 (==5.27.0)", "tox (>=3.15,<4.0)", "lark (==1.1.2)", "hypothesis[lark] (>=5.37.1,<6.0)", "black (==21.9b0)", "click (<8.1.0)", "flake8 (==3.9.2)", "flake8-bugbear (==20.1.4)", "flake8-use-fstring (==1.1)", "isort (==5.9.3)", "mypy (==0.910)", "recommonmark", "sphinx (>=3.0,<4.0)", "sphinx-rtd-theme (>=0.5,<0.6)", "ipython", "pre-commit", "pyinstaller", "twine"]
+docs = ["recommonmark", "sphinx (>=3.0,<4.0)", "sphinx-rtd-theme (>=0.5,<0.6)"]
+lint = ["black (==21.9b0)", "click (<8.1.0)", "flake8 (==3.9.2)", "flake8-bugbear (==20.1.4)", "flake8-use-fstring (==1.1)", "isort (==5.9.3)", "mypy (==0.910)"]
+test = ["pytest (>=6.2.5,<7.0)", "pytest-cov (>=2.10,<3.0)", "pytest-instafail (>=0.4,<1.0)", "pytest-xdist (>=2.5,<3.0)", "pytest-split (>=0.7.0,<1.0)", "pytest-rerunfailures (>=10.2,<11)", "eth-tester[py-evm] (>=0.6.0b6,<0.7)", "py-evm (>=0.5.0a3,<0.6)", "web3 (==5.27.0)", "tox (>=3.15,<4.0)", "lark (==1.1.2)", "hypothesis[lark] (>=5.37.1,<6.0)"]
+
+[[package]]
 name = "watchdog"
 version = "2.2.1"
 description = "Filesystem events monitoring"
@@ -1524,13 +1543,16 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 [metadata]
 lock-version = "1.1"
 python-versions = "3.10"
-content-hash = "35eb62bc5b3ae33f663f023e4dede52c7ce1e924f12c2ddc11d59ed6b570e8b6"
+content-hash = "37fa3f0a8d60fe1c80445377fc712095a718ef2341d6f669d34c352e560fd773"
 
 [metadata.files]
 aiohttp = []
 aiosignal = []
 appnope = []
-asttokens = []
+asttokens = [
+    {file = "asttokens-2.0.5-py2.py3-none-any.whl", hash = "sha256:0844691e88552595a6f4a4281a9f7f79b8dd45ca4ccea82e5e05b4bbdb76705c"},
+    {file = "asttokens-2.0.5.tar.gz", hash = "sha256:9a54c114f02c7a9480d56550932546a3f1fe71d8a02f1bc7ccd0ee3ee35cf4d5"},
+]
 async-timeout = [
     {file = "async-timeout-4.0.2.tar.gz", hash = "sha256:2163e1640ddb52b7a8c80d0a67a08587e5d245cc9c553a74a847056bc2976b15"},
     {file = "async_timeout-4.0.2-py3-none-any.whl", hash = "sha256:8ca1e4fcf50d07413d66d1a5e416e42cfdf5851c981d679a09851a6853383b3c"},
@@ -1688,6 +1710,7 @@ urllib3 = []
 varint = [
     {file = "varint-1.0.2.tar.gz", hash = "sha256:a6ecc02377ac5ee9d65a6a8ad45c9ff1dac8ccee19400a5950fb51d594214ca5"},
 ]
+vyper = []
 watchdog = []
 wcwidth = []
 web3 = []

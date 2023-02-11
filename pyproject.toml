@@ -7,6 +7,7 @@ authors = ["Azat Serikov <azatsdev@gmail.com>"]
 [tool.poetry.dependencies]
 python = "3.10"
 eth-ape = "^0.6.2"
+vyper = "0.3.7"
 
 [tool.poetry.dev-dependencies]
 

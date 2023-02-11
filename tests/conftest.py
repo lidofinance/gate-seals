@@ -1,4 +1,14 @@
 import pytest
+import ape
+from ape.logging import logger
+from utils.blueprint import get_blueprint_address, get_blueprint_initcode
+from utils.constants import ZERO_ADDRESS
+
+"""
+
+    ACCOUNTS
+
+"""
 
 
 @pytest.fixture(scope="session")
@@ -12,7 +22,7 @@ def dao_agent(accounts):
 
 
 @pytest.fixture(scope="session")
-def seal_committee(accounts):
+def sealing_committee(accounts):
     return accounts[2]
 
 
@@ -21,9 +31,52 @@ def stranger(accounts):
     return accounts[2]
 
 
+"""
+
+    CONTRACTS
+
+"""
+
+
 @pytest.fixture(scope="function")
-def gate_seal(project, deployer, dao_agent):
-    return project.GateSeal.deploy(dao_agent, sender=deployer)
+def blueprint_address(project, deployer):
+    gate_seal_bytecode = project.GateSeal.contract_type.deployment_bytecode.bytecode
+    gate_seal_initcode = get_blueprint_initcode(gate_seal_bytecode)
+    return get_blueprint_address(deployer, gate_seal_initcode)
+
+
+@pytest.fixture(scope="function")
+def gate_seal_factory(project, deployer, blueprint_address):
+    return project.GateSealFactory.deploy(blueprint_address, sender=deployer)
+
+
+@pytest.fixture(scope="function")
+def gate_seal(
+    project,
+    deployer,
+    gate_seal_factory,
+    expiry_period,
+    sealing_committee,
+    seal_duration,
+    sealable_mock,
+    sealable_mock_2,
+):
+    transaction = gate_seal_factory.create_gate_seal(
+        expiry_period,
+        sealing_committee,
+        seal_duration,
+        [
+            sealable_mock,
+            sealable_mock_2,
+        ],
+        sender=deployer,
+    )
+
+    gate_seal_address = transaction.events[0].gate_seal
+
+    logger.warning(gate_seal_address)
+
+    return project.GateSeal.at(gate_seal_address)
 
 
 @pytest.fixture(scope="function")
@@ -31,14 +84,14 @@ def sealable_mock(project, deployer):
     return project.SealableMock.deploy(sender=deployer)
 
 
-@pytest.fixture(scope="function", params=["minute", "hour", "day", "week"])
-def seal_duration(request):
-    return request.getfixturevalue(request.param)
+@pytest.fixture(scope="function")
+def sealable_mock_2(project, deployer):
+    return project.SealableMock.deploy(sender=deployer)
 
 
-@pytest.fixture(scope="function", params=["minute", "hour", "day", "week"])
-def expiry_period(request):
-    return request.getfixturevalue(request.param)
+@pytest.fixture(scope="function")
+def sealable_mock_3(project, deployer):
+    return project.SealableMock.deploy(sender=deployer)
 
 
 """
@@ -46,6 +99,16 @@ def expiry_period(request):
     TIME PERIODS
 
 """
+
+
+@pytest.fixture(scope="session", params=["week"])
+def seal_duration(request):
+    return request.getfixturevalue(request.param)
+
+
+@pytest.fixture(scope="session", params=["year"])
+def expiry_period(request):
+    return request.getfixturevalue(request.param)
 
 
 @pytest.fixture(scope="session")
