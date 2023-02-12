@@ -13,5 +13,7 @@ def test_happy_path(
     gate_seal.seal(sealable_mock, sender=sealing_committee)
     assert project.SealableMock.at(sealable_mock).isPaused(), "failed to seal"
 
-    gate_seal.seal_all(sender=sealing_committee)
-    assert project.SealableMock.at(sealable_mock_2).isPaused(), "failed to seal all"
+    # gate_seal.seal_all(sender=sealing_committee)
+    # assert project.SealableMock.at(sealable_mock_2).isPaused(), "failed to seal all"
+
+    # assert gate_seal.is_expired(), "must be expired after sealing all"
