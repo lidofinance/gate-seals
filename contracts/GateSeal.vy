@@ -119,4 +119,4 @@ def _seal(_sealable: address):
 
 @internal
 def _expire_immediately():
-    self.expiry_timestamp = block.timestamp
+    self.expiry_timestamp = block.timestamp - 1
