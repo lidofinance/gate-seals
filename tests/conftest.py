@@ -62,19 +62,17 @@ def gate_seal(
     sealable_mock_2,
 ):
     transaction = gate_seal_factory.create_gate_seal(
-        expiry_period,
         sealing_committee,
         seal_duration,
         [
             sealable_mock,
             sealable_mock_2,
         ],
+        expiry_period,
         sender=deployer,
     )
 
     gate_seal_address = transaction.events[0].gate_seal
-
-    logger.warning(gate_seal_address)
 
     return project.GateSeal.at(gate_seal_address)
 

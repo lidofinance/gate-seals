@@ -1,10 +1,18 @@
 resumed_timestamp: uint256
 
+
 @external
 @view
-def is_paused() -> bool:
-    return self.resumed_timestamp > block.timestamp
+def isPaused() -> bool:
+    return self._is_paused()
+
 
 @external
 def pause(_duration: uint256):
-    self.resumed_timestamp = block.timestamp + _duration
+    if not self._is_paused():
+        self.resumed_timestamp = block.timestamp + _duration
+
+@internal
+@view
+def _is_paused() -> bool:
+    return block.timestamp < self.resumed_timestamp

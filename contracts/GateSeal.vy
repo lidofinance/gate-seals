@@ -1,97 +1,148 @@
 # @version 0.3.7
 
+event Sealed:
+    gate_seal: address
+    sealed_by: address
+    sealable: address
+    seal_duration: uint256
+
 interface IPausableUntil:
     def pause(_duration: uint256): nonpayable
+    def isPaused() -> bool: view
+
+struct Sealable:
+    location: address
+    is_sealed: bool
 
 MAX_SEALABLES: constant(uint256) = 8
-EXPIRY_TIMESTAMP: immutable(uint256)
-SEALING_COMMITEE: immutable(address)
+INVALID_INDEX: constant(uint256) = MAX_SEALABLES
+
+SEALING_COMMITTEE: immutable(address)
 SEAL_DURATION: immutable(uint256)
-sealables: DynArray[address, MAX_SEALABLES]
+sealables: DynArray[Sealable, MAX_SEALABLES]
+sealables_unsealed: uint256
+expiry_timestamp: uint256
+
 
 @external
 def __init__(
-    _expiry_period: uint256,
     _sealing_committee: address,
     _seal_duration: uint256,
-    _sealables: DynArray[address, MAX_SEALABLES]
+    _sealables: DynArray[address, MAX_SEALABLES],
+    _expiry_period: uint256
 ):
-    assert _sealing_committee != empty(address), "_sealing_committee: zero address"
+    assert _sealing_committee != empty(address), "sealing committee: zero address"
+    assert _seal_duration != 0, "seal duration: zero"
+    assert _expiry_period != 0, "expiry period: zero"
+
+    SEALING_COMMITTEE = _sealing_committee
+    SEAL_DURATION = _seal_duration
 
     for sealable in _sealables:
-        assert sealable != empty(address), "_sealables: includes zero address"
+        assert sealable != empty(address), "sealables: includes zero address"
+        self.sealables.append(Sealable({ location: sealable, is_sealed: False }))
 
-    EXPIRY_TIMESTAMP = block.timestamp + _expiry_period
-    SEALING_COMMITEE = _sealing_committee
-    SEAL_DURATION = _seal_duration
-    self.sealables = _sealables
+    self.sealables_unsealed = len(_sealables)
+    
+    self.expiry_timestamp = block.timestamp + _expiry_period
 
 
-@view
 @external
-def get_expiry_timestamp() -> uint256:
-    return EXPIRY_TIMESTAMP
-
-
 @view
+def get_sealing_committee() -> address:
+    return SEALING_COMMITTEE
+
+
 @external
-def is_expired() -> bool:
-    return self._is_expired()
-
-
 @view
-@external
-def get_sealing_commitee() -> address:
-    return SEALING_COMMITEE
-
-
-@view
-@external
 def get_seal_duration() -> uint256:
     return SEAL_DURATION
 
 
-@view    
 @external
+@view
 def get_sealables() -> DynArray[address, MAX_SEALABLES]:
     return self._get_sealables()
 
 
-@view
 @external
-def is_sealable(_address: address) -> bool:
-    return self._is_sealable(_address)
+@view
+def get_expiry_timestamp() -> uint256:
+    return self.expiry_timestamp
 
 
 @external
-def seal_gate(_address: address):
-    assert msg.sender == SEALING_COMMITEE, "sender: not SEALING_COMMITEE"
-    assert not self._is_expired(), "state: expired"
+def seal(_sealable: address):
+    assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
+    assert not self._is_expired(), "gate seal: expired"
+    
+    sealable_index: uint256 = self._get_sealable_index(_sealable)
+    assert self._is_sealable(sealable_index), "sealable: not a sealable"
 
-    IPausableUntil(_address).pause(SEAL_DURATION)
+    sealable: Sealable = self.sealables[sealable_index]
+
+    assert not sealable.is_sealed, "sealable: cannot to be sealed more than once"
+    sealable.is_sealed = True
+    self.sealables_unsealed -= 1
+
+    if (self.sealables_unsealed == 0):
+        self.expiry_timestamp = block.timestamp
+
+    pausable: IPausableUntil = IPausableUntil(sealable.location)
+    pausable.pause(SEAL_DURATION)
+    assert pausable.isPaused(), "sealable: failed to seal"
+
+    log Sealed(self, SEALING_COMMITTEE, _sealable, SEAL_DURATION)
 
 
+@external
+def seal_all():
+    assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
+    assert not self._is_expired(), "gate seal: expired"
 
-@view
+    self.sealables_unsealed = 0
+    self.expiry_timestamp = block.timestamp
+
+    for sealable in self.sealables:
+        if not sealable.is_sealed:
+            pausable: IPausableUntil = IPausableUntil(sealable.location)
+            pausable.pause(SEAL_DURATION)
+            assert pausable.isPaused(), "sealable: failed to seal"
+
+            log Sealed(self, SEALING_COMMITTEE, sealable.location, SEAL_DURATION)
+
+
 @internal
-def _is_expired() -> bool:
-    return block.timestamp < EXPIRY_TIMESTAMP
-
-
 @view
-@internal
-def _is_sealable(_address: address) -> bool:
-    return _address in self.sealables
-
-
-@view
-@internal
 def _get_sealables() -> DynArray[address, MAX_SEALABLES]:
-    return self.sealables
+    sealables: DynArray[address, MAX_SEALABLES] = []
+    for sealable in self.sealables:
+        sealables.append(sealable.location)
+
+    return sealables
 
 
-@view
 @internal
-def _get_sealable(index: uint256) -> address:
-    return self.sealables[index]
+@view
+def _is_sealable(_sealable_index: uint256) -> bool:
+    return _sealable_index < INVALID_INDEX
 
+
+@internal
+@view
+def _get_sealable_index(_sealable: address) -> uint256:
+    sealable_index: uint256 = INVALID_INDEX
+    sealables_length: uint256 = len(self.sealables)
+
+    for i in range(MAX_SEALABLES):
+        if i < sealables_length and _sealable == self.sealables[i].location:
+            sealable_index = i
+            break 
+
+    return sealable_index
+
+
+@internal
+@view
+def _is_expired() -> bool:
+    return block.timestamp > self.expiry_timestamp

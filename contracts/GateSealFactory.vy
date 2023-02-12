@@ -14,19 +14,19 @@ def __init__(_blueprint: address):
 
 @external
 def create_gate_seal(
-    _expiry_period: uint256,
     _sealing_committee: address,
     _seal_duration: uint256,
-    _sealables: DynArray[address, MAX_SEALABLES]
+    _sealables: DynArray[address, MAX_SEALABLES],
+    _expiry_period: uint256
 ):
     gate_seal: address = create_from_blueprint(
         BLUEPRINT,
-        _expiry_period,
         _sealing_committee,
         _seal_duration,
         _sealables,
+        _expiry_period,
         code_offset=EIP5202_CODE_OFFSET,
-        salt=keccak256("hello")
+        salt=convert(_sealing_committee, bytes32)
     )
 
     log GateSealCreated(gate_seal)
