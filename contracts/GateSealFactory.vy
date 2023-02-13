@@ -10,7 +10,15 @@ BLUEPRINT: immutable(address)
 
 @external
 def __init__(_blueprint: address):
+    assert _blueprint != empty(address), "blueprint: zero address"
     BLUEPRINT = _blueprint
+
+
+@external
+@view
+def get_blueprint() -> address:
+    return BLUEPRINT
+
 
 @external
 def create_gate_seal(
