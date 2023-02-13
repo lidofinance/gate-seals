@@ -48,6 +48,7 @@ def __init__(
 ):
     assert _sealing_committee != empty(address), "sealing committee: zero address"
     assert _seal_duration != 0, "seal duration: zero"
+    assert len(_sealables) > 0, "sealables: empty list"
     assert _expiry_period != 0, "expiry period: zero"
 
     SEALING_COMMITTEE = _sealing_committee
