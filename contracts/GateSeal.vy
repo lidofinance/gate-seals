@@ -1,4 +1,23 @@
 # @version 0.3.7
+"""
+@title GateSeal
+@author mymphe
+@notice A one-time panic button for pausable contracts
+@dev The gate seal is meant to be used as an emergency pause for pausable contracts.
+     It must be operated by a multisig committee, though the code does not
+     perform any such checks. Bypassing the DAO vote, The gate seal pauses 
+     the contract(s) immediately for a set duration, e.g. one week, which gives
+     the DAO some time to analyze the situation, decide on the course of action,
+     hold a vote, implement fixes, etc.
+
+     Gate seals are only a temporary solution and will be deprecated in the future,
+     as it is undesireable for the protocol to rely on a multisig. This is why
+     each gate seal has an expiry date. Once expired, the gate seal is no longer
+     usable and a new gate seal must be set up with a new multisig committee. This
+     works as a kind of difficulty bomb, a device that encourages the protocol
+     to get rid of gate seals sooner rather than later.
+"""
+
 
 event Sealed:
     gate_seal: address
