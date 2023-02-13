@@ -34,7 +34,6 @@ def create_gate_seal(
         _sealables,
         _expiry_period,
         code_offset=EIP5202_CODE_OFFSET,
-        salt=convert(_sealing_committee, bytes32)
     )
 
     log GateSealCreated(gate_seal)
