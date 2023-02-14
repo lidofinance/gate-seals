@@ -1,8 +1,9 @@
+from random import randint
 import pytest
 import ape
 from ape.logging import logger
 from utils.blueprint import get_blueprint_address, get_blueprint_initcode
-from utils.constants import ZERO_ADDRESS
+from utils.constants import MAX_SEALABLES, MIN_SEALABLES
 
 """
 
@@ -55,19 +56,15 @@ def gate_seal(
     project,
     deployer,
     gate_seal_factory,
-    expiry_period,
     sealing_committee,
     seal_duration,
-    sealable_mock,
-    sealable_mock_2,
+    sealables,
+    expiry_period,
 ):
     transaction = gate_seal_factory.create_gate_seal(
         sealing_committee,
         seal_duration,
-        [
-            sealable_mock,
-            sealable_mock_2,
-        ],
+        sealables,
         expiry_period,
         sender=deployer,
     )
@@ -78,18 +75,11 @@ def gate_seal(
 
 
 @pytest.fixture(scope="function")
-def sealable_mock(project, deployer):
-    return project.SealableMock.deploy(sender=deployer)
-
-
-@pytest.fixture(scope="function")
-def sealable_mock_2(project, deployer):
-    return project.SealableMock.deploy(sender=deployer)
-
-
-@pytest.fixture(scope="function")
-def sealable_mock_3(project, deployer):
-    return project.SealableMock.deploy(sender=deployer)
+def sealables(project, deployer):
+    _sealables = []
+    for _ in range(randint(MIN_SEALABLES, MAX_SEALABLES)):
+        _sealables.append(project.SealableMock.deploy(sender=deployer))
+    return _sealables
 
 
 """
@@ -99,29 +89,17 @@ def sealable_mock_3(project, deployer):
 """
 
 
-@pytest.fixture(scope="session", params=["week"])
-def seal_duration(request):
-    return request.getfixturevalue(request.param)
+def seal_duration(week):
+    return week
 
 
-@pytest.fixture(scope="session", params=["year"])
-def expiry_period(request):
-    return request.getfixturevalue(request.param)
-
-
-@pytest.fixture(scope="session")
-def minute():
-    return 60 * 60
+def expiry_period(year):
+    return year
 
 
 @pytest.fixture(scope="session")
-def hour(minute):
-    return minute * 60
-
-
-@pytest.fixture(scope="session")
-def day(hour):
-    return hour * 24
+def day():
+    return 60 * 60 * 24
 
 
 @pytest.fixture(scope="session")

@@ -1,4 +1,4 @@
-from ape import reverts  # type: ignore (some issue fro)
+from ape import reverts  # type: ignore (some issue with Pylance or ape)
 from ape.logging import logger
 from ape.exceptions import VirtualMachineError
 from utils.constants import ZERO_ADDRESS
@@ -11,6 +11,7 @@ def test_factory_blueprint_cannot_be_zero_address(project, deployer):
 
 def test_blueprint_uncallable(project, blueprint_address):
     blueprint = project.GateSeal.at(blueprint_address)
+    # using try-except because ape.reverts doesn't catch VirtualMachineError for some reason
     try:
         blueprint.get_sealing_committee()
         assert False, "did not crash"
