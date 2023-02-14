@@ -75,11 +75,8 @@ def gate_seal(
 
 
 @pytest.fixture(scope="function")
-def sealables(project, deployer):
-    _sealables = []
-    for _ in range(randint(MIN_SEALABLES, MAX_SEALABLES)):
-        _sealables.append(project.SealableMock.deploy(sender=deployer))
-    return _sealables
+def sealables(generate_sealables):
+    return generate_sealables(randint(MIN_SEALABLES, MAX_SEALABLES))
 
 
 """
@@ -89,10 +86,12 @@ def sealables(project, deployer):
 """
 
 
+@pytest.fixture(scope="session")
 def seal_duration(week):
     return week
 
 
+@pytest.fixture(scope="session")
 def expiry_period(year):
     return year
 
@@ -110,3 +109,15 @@ def week(day):
 @pytest.fixture(scope="session")
 def year(day):
     return day * 365
+
+
+"""
+
+    UTILS
+
+"""
+
+
+@pytest.fixture(scope="session")
+def generate_sealables(project, deployer):
+    return lambda n: [project.SealableMock.deploy(sender=deployer) for _ in range(n)]
