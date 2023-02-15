@@ -122,3 +122,27 @@ def test_deploy_params_must_match(
     assert (
         gate_seal.get_expiry_timestamp() == expiry_timestamp
     ), "expiry timestamp don't match"
+    assert gate_seal.is_expired() == False, "should not be expired"
+
+
+def test_seal_all(project, gate_seal, sealing_committee, sealables):
+    gate_seal.seal(sealables, sender=sealing_committee)
+    assert (
+        gate_seal.is_expired() == True
+    ), "gate seal must be expired immediately after sealing"
+
+    for sealable in sealables:
+        assert project.SealableMock.at(sealable).isPaused(), "sealable must be sealed"
+
+
+def test_seal_one(project, gate_seal, sealing_committee, sealables):
+    sealable_to_seal = sealables[0]
+
+    gate_seal.seal([sealable_to_seal], sender=sealing_committee)
+    assert (
+        gate_seal.is_expired() == True
+    ), "gate seal must be expired immediately after sealing"
+
+    assert project.SealableMock.at(
+        sealable_to_seal
+    ).isPaused(), "sealable must be sealed"
