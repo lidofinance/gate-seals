@@ -27,15 +27,19 @@ def test_happy_path(project, accounts):
 
     # Step 5. Set up the GateSeal config
     SEALING_COMMITTEE = accounts[1]
-    SEAL_DURATION = 60 * 60 * 24 * 7  # one week
+    SEAL_DURATION_SECONDS = 60 * 60 * 24 * 7  # one week
     SEALABLES = []
-    for i in range(8):
+    for _ in range(8):
         SEALABLES.append(project.SealableMock.deploy(sender=DEPLOYER))
     EXPIRY_TIMESTAMP = 60 * 60 * 24 * 365  # one year
 
     # Step 6. Create a GateSeal using the factory
     transaction = gate_seal_factory.create_gate_seal(
-        SEALING_COMMITTEE, SEAL_DURATION, SEALABLES, EXPIRY_TIMESTAMP, sender=DEPLOYER
+        SEALING_COMMITTEE,
+        SEAL_DURATION_SECONDS,
+        SEALABLES,
+        EXPIRY_TIMESTAMP,
+        sender=DEPLOYER,
     )
 
     gate_seal_address = transaction.events[0].gate_seal
@@ -51,12 +55,7 @@ def test_happy_path(project, accounts):
 
     # Step 7. Seal one of the sealables
     SEALABLE = SEALABLES[0]
-    gate_seal.seal(SEALABLE, sender=SEALING_COMMITTEE)
+    gate_seal.seal([SEALABLE], sender=SEALING_COMMITTEE)
     assert project.SealableMock.at(SEALABLE).isPaused(), "failed to seal"
-
-    # Step 8. Seal the rest of the sealables
-    gate_seal.seal_all(sender=SEALING_COMMITTEE)
-    for sealable in SEALABLES:
-        assert project.SealableMock.at(sealable).isPaused(), "failed to seal all"
 
     assert gate_seal.is_expired(), "must be expired after sealing all"

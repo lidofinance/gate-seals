@@ -57,13 +57,13 @@ def gate_seal(
     deployer,
     gate_seal_factory,
     sealing_committee,
-    seal_duration,
+    seal_duration_seconds,
     sealables,
     expiry_period,
 ):
     transaction = gate_seal_factory.create_gate_seal(
         sealing_committee,
-        seal_duration,
+        seal_duration_seconds,
         sealables,
         expiry_period,
         sender=deployer,
@@ -87,7 +87,7 @@ def sealables(generate_sealables):
 
 
 @pytest.fixture(scope="session")
-def seal_duration(week):
+def seal_duration_seconds(week):
     return week
 
 
