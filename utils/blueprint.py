@@ -1,5 +1,7 @@
 from ape import project
 
+# Blueprint utils
+# https://eips.ethereum.org/EIPS/eip-5202
 
 def get_blueprint_address(deployer, initcode):
     transaction = project.provider.network.ecosystem.create_transaction(
@@ -26,3 +28,10 @@ def get_blueprint_initcode(bytecode):
         + initcode
     )
     return initcode
+
+
+def verify_preamble(initcode):
+    assert initcode[0] == int("FE", 16), "blueprint must start with magic byte: 0xFE"
+    assert initcode[1] == int("71", 16), "blueprint's second byte must be 0x71"
+    n_length_bytes = initcode[2] & 0b11
+    assert n_length_bytes != 0b11, "reserved bits are set, not an EIP5202 preamble"

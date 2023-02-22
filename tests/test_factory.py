@@ -1,6 +1,7 @@
 from ape import reverts  # type: ignore (some issue with Pylance or ape)
 from ape.logging import logger
 from ape.exceptions import VirtualMachineError
+from utils.blueprint import verify_preamble
 from utils.constants import ZERO_ADDRESS
 
 
@@ -23,3 +24,8 @@ def test_blueprint_address_matches(blueprint_address, gate_seal_factory):
     assert (
         gate_seal_factory.get_blueprint() == blueprint_address
     ), "blueprint address does not match"
+
+
+def test_blueprint_preamble(project, blueprint_address):
+    blueprint = project.provider.get_code(blueprint_address)
+    verify_preamble(blueprint)
