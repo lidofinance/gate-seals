@@ -22,8 +22,15 @@ A GateSeal is set up with an immutable configuration at the time of construction
 
 If an emergency arises, the sealing committee simply calls the seal function and puts the contracts on pause for the set duration. 
 
-
 While GateSeals provide a quick and easy way to safeguard the protocol from unexpected situations, it is undesireable for a decentralized protocol to rely on a multisig in any capacity. This is why GateSeals are only a temporary solution and, thus, implement a kind of "inconvenience bomb" in that each GateSeal has a limited lifespan and must be set up anew once expired. This encourages the protocol to come with a sustainable long-term solution sooner rather than later.
+
+## How are GateSeals created?
+
+GateSeals are created using the GateSealFactory. The factory uses the blueprint pattern whereby new GateSeals are deployed using the initcode (blueprint) stored onchain. The blueprint is essentially a broken GateSeal that can only be used to create new GateSeals.
+
+While Vyper offers ways to create new contracts, we opted to use the blueprint pattern because it creates a fully autonomous contract without any dependencies. Unlike other contract-creating functions, [`create_from_blueprint`](https://docs.vyperlang.org/en/stable/built-in-functions.html#chain-interaction) invokes the constructor of the contract, thus, helping avoid the initilization shenanigans.
+
+The blueprint follows the [EIP-5202](https://eips.ethereum.org/EIPS/eip-5202) format, which includes a header that makes the contract uncallable and specifies the version. 
 
 ## Contributing
 
