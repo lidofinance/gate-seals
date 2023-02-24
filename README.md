@@ -2,6 +2,8 @@
 
 A panic button for pausable contracts.
 
+![](/assets/monty-python.png)
+
 ## What is a GateSeal?
 
 A GateSeal is a contract that allows the designated account to instantly put a set of contracts on pause (i.e. seal) for a limited duration. GateSeals are meant to be used as a panic button for crucial contracts in case of an emergency. Each GateSeal is one-time use only and immediately becomes unusable once activated. If the seal was never triggered, the GateSeal would still eventually after a set period.
