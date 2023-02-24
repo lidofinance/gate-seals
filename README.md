@@ -1,6 +1,6 @@
 # GateSeal ⛩️
 
-A panic button for pausable contracts.
+A one-time panic button for pausable contracts.
 
 ![](/assets/monty-python.png)
 
