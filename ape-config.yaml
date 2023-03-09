@@ -9,3 +9,14 @@ ethereum:
   default_network: local
   local:
     default_provider: hardhat
+
+hardhat:
+  fork:
+    ethereum:
+      mainnet:
+        upstream_provider: infura
+
+geth:
+  ethereum:
+    mainnet:
+      uri: ${WEB3_INFURA_PROJECT_ID}
