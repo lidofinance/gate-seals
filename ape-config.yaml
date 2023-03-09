@@ -19,4 +19,4 @@ hardhat:
 geth:
   ethereum:
     mainnet:
-      uri: ${WEB3_INFURA_PROJECT_ID}
+      uri: ${MAINNET_RPC_ENDPOINT}
