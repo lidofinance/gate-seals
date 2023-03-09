@@ -2,7 +2,7 @@ from random import randint
 import pytest
 import ape
 from ape.logging import logger
-from utils.blueprint import get_blueprint_address, get_blueprint_initcode
+from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import MAX_SEALABLES, MIN_SEALABLES
 
 """
@@ -42,8 +42,8 @@ def stranger(accounts):
 @pytest.fixture(scope="function")
 def blueprint_address(project, deployer):
     gate_seal_bytecode = project.GateSeal.contract_type.deployment_bytecode.bytecode
-    gate_seal_initcode = get_blueprint_initcode(gate_seal_bytecode)
-    return get_blueprint_address(deployer, gate_seal_initcode)
+    gate_seal_deploy_code = construct_blueprint_deploy_bytecode(gate_seal_bytecode)
+    return deploy_blueprint(deployer, gate_seal_deploy_code)
 
 
 @pytest.fixture(scope="function")

@@ -1,6 +1,6 @@
 from ape.logging import logger
 
-from utils.blueprint import get_blueprint_address, get_blueprint_initcode
+from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 
 
 def test_happy_path(project, accounts):
@@ -11,10 +11,10 @@ def test_happy_path(project, accounts):
 
     # Step 2. Generate the GateSeal initcode with preamble which will be stored onchain
     #         and will be used as the blueprint for the factory to create new GateSeals
-    gate_seal_initcode = get_blueprint_initcode(gate_seal_bytecode)
+    gate_seal_deploy_code = construct_blueprint_deploy_bytecode(gate_seal_bytecode)
 
     # Step 3. Deploy initcode
-    blueprint_address = get_blueprint_address(DEPLOYER, gate_seal_initcode)
+    blueprint_address = deploy_blueprint(DEPLOYER, gate_seal_deploy_code)
 
     # Step 4. Deploy the GateSeal factory and pass the address of the GateSeal blueprint
     gate_seal_factory = project.GateSealFactory.deploy(

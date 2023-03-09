@@ -1,4 +1,4 @@
-from ape import reverts  # type: ignore (some issue with Pylance or ape)
+from ape import reverts
 from ape.logging import logger
 import pytest
 

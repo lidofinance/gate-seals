@@ -1,7 +1,7 @@
-from ape import reverts  # type: ignore (some issue with Pylance or ape)
+from ape import reverts
 from ape.logging import logger
 from ape.exceptions import VirtualMachineError
-from utils.blueprint import verify_preamble
+from utils.blueprint import verify_eip522_blueprint
 from utils.constants import ZERO_ADDRESS
 
 
@@ -26,6 +26,6 @@ def test_blueprint_address_matches(blueprint_address, gate_seal_factory):
     ), "blueprint address does not match"
 
 
-def test_blueprint_preamble(project, blueprint_address):
+def test_compliance_with_eip_5202(project, blueprint_address):
     blueprint = project.provider.get_code(blueprint_address)
-    verify_preamble(blueprint)
+    verify_eip522_blueprint(blueprint)
