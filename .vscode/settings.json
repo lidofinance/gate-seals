@@ -1,4 +1,4 @@
 {
     "python.analysis.typeCheckingMode": "basic",
-    "python.languageServer": "Pylance"
+    "python.languageServer": "Jedi"
 }
