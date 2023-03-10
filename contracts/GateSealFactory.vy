@@ -23,12 +23,13 @@
 event GateSealCreated:
     gate_seal: address
 
-# First 3 bytes of the blueprint is the EIP-5202 preamble;
+
+# First 3 bytes of the blueprint is the EIP-5202 header;
 # The actual code of the contract starts at 4th byte
 EIP5202_CODE_OFFSET: constant(uint256) = 3
 
 # The maximum number of sealables is 8.
-# Gate seals were originally designed to pause WithdrawalQueue and ValidatorExitBus,
+# GateSeals were originally designed to pause WithdrawalQueue and ValidatorExitBus,
 # however, there is a non-zero chance that there might be more in the future, which
 # is why we've opted to use a dynamic-size array.
 MAX_SEALABLES: constant(uint256) = 8
