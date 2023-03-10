@@ -135,6 +135,7 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     """
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
+    assert len(_sealables) > 0, "sealables: empty subset"
 
     self._expire_immediately()
     
