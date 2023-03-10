@@ -2,28 +2,32 @@ from ape import reverts
 from ape.logging import logger
 import pytest
 
-from utils.constants import MAX_SEAL_DURATION_SECONDS, MAX_SEALABLES, ZERO_ADDRESS
+from utils.constants import (
+    MAX_SEAL_DURATION_SECONDS,
+    MAX_SEALABLES,
+    ZERO_ADDRESS,
+)
 
 
 def test_committee_cannot_be_zero_address(
-    project, deployer, seal_duration_seconds, sealables, expiry_period
+    project, deployer, seal_duration_seconds, sealables, expiry_timestamp
 ):
     with reverts("sealing committee: zero address"):
         project.GateSeal.deploy(
             ZERO_ADDRESS,
             seal_duration_seconds,
             sealables,
-            expiry_period,
+            expiry_timestamp,
             sender=deployer,
         )
 
 
 def test_seal_duration_cannot_be_zero(
-    project, deployer, sealing_committee, sealables, expiry_period
+    project, deployer, sealing_committee, sealables, expiry_timestamp
 ):
     with reverts("seal duration: zero"):
         project.GateSeal.deploy(
-            sealing_committee, 0, sealables, expiry_period, sender=deployer
+            sealing_committee, 0, sealables, expiry_timestamp, sender=deployer
         )
 
 
@@ -32,13 +36,13 @@ def test_seal_duration_max(
     deployer,
     sealing_committee,
     sealables,
-    expiry_period,
+    expiry_timestamp,
 ):
     gate_seal = project.GateSeal.deploy(
         sealing_committee,
         MAX_SEAL_DURATION_SECONDS,
         sealables,
-        expiry_period,
+        expiry_timestamp,
         sender=deployer,
     )
 
@@ -52,14 +56,14 @@ def test_seal_duration_exceeds_max(
     deployer,
     sealing_committee,
     sealables,
-    expiry_period,
+    expiry_timestamp,
 ):
     with reverts("seal duration: exceeds max"):
         project.GateSeal.deploy(
             sealing_committee,
             MAX_SEAL_DURATION_SECONDS + 1,
             sealables,
-            expiry_period,
+            expiry_timestamp,
             sender=deployer,
         )
 
@@ -69,26 +73,42 @@ def test_sealables_exceeds_max(
     deployer,
     sealing_committee,
     seal_duration_seconds,
-    expiry_period,
-    generate_sealables,
+    expiry_timestamp,
 ):
-    sealables = generate_sealables(MAX_SEALABLES)
     with reverts("sealables: empty list"):
         project.GateSeal.deploy(
-            sealing_committee, seal_duration_seconds, [], expiry_period, sender=deployer
+            sealing_committee,
+            seal_duration_seconds,
+            [],
+            expiry_timestamp,
+            sender=deployer,
         )
 
 
-def test_expiry_period_cannot_be_zero(
+def test_expiry_timestamp_cannot_be_now(
+    project, deployer, sealing_committee, seal_duration_seconds, sealables, now
+):
+    with reverts("expiry timestamp: must be in the future"):
+        project.GateSeal.deploy(
+            sealing_committee, seal_duration_seconds, sealables, now, sender=deployer
+        )
+
+
+def test_expiry_timestamp_cannot_exceed_max(
     project,
     deployer,
     sealing_committee,
     seal_duration_seconds,
     sealables,
+    expiry_timestamp,
 ):
-    with reverts("expiry period: zero"):
+    with reverts("expiry timestamp: exceeds max expiry period"):
         project.GateSeal.deploy(
-            sealing_committee, seal_duration_seconds, sealables, 0, sender=deployer
+            sealing_committee,
+            seal_duration_seconds,
+            sealables,
+            expiry_timestamp + 1,
+            sender=deployer,
         )
 
 
@@ -98,7 +118,7 @@ def test_sealables_cannot_include_zero_address(
     deployer,
     sealing_committee,
     seal_duration_seconds,
-    expiry_period,
+    expiry_timestamp,
     zero_address_index,
     generate_sealables,
 ):
@@ -110,7 +130,7 @@ def test_sealables_cannot_include_zero_address(
             sealing_committee,
             seal_duration_seconds,
             sealables,
-            expiry_period,
+            expiry_timestamp,
             sender=deployer,
         )
 
@@ -120,7 +140,7 @@ def test_sealables_cannot_exceed_max_length(
     deployer,
     sealing_committee,
     seal_duration_seconds,
-    expiry_period,
+    expiry_timestamp,
     generate_sealables,
 ):
     sealables = generate_sealables(MAX_SEALABLES + 1)
@@ -130,7 +150,7 @@ def test_sealables_cannot_exceed_max_length(
             sealing_committee,
             seal_duration_seconds,
             sealables,
-            expiry_period,
+            expiry_timestamp,
             sender=deployer,
         )
 
@@ -141,19 +161,15 @@ def test_deploy_params_must_match(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    expiry_period,
+    expiry_timestamp,
 ):
     gate_seal = project.GateSeal.deploy(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        expiry_period,
+        expiry_timestamp,
         sender=deployer,
     )
-
-    deployed_block_number = gate_seal._cached_receipt.block_number
-    deployed_timestamp = project.provider.get_block(deployed_block_number).timestamp
-    expiry_timestamp = deployed_timestamp + expiry_period
 
     assert (
         gate_seal.get_sealing_committee() == sealing_committee
@@ -223,19 +239,15 @@ def test_natural_expiry(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    expiry_period,
+    expiry_timestamp,
 ):
     gate_seal = project.GateSeal.deploy(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        expiry_period,
+        expiry_timestamp,
         sender=deployer,
     )
-
-    deployed_block_number = gate_seal._cached_receipt.block_number
-    deployed_timestamp = project.provider.get_block(deployed_block_number).timestamp
-    expiry_timestamp = deployed_timestamp + expiry_period
 
     networks.active_provider.set_timestamp(expiry_timestamp)
     networks.active_provider.mine()

@@ -35,12 +35,12 @@ interface IPausableUntil:
     def pauseFor(_duration: uint256): nonpayable
     def isPaused() -> bool: view
 
+SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 
 # The maximum allowed seal duration is 14 days.
 # Anything higher than that may be too long of a disruption for the protocol.
 # Keep in mind, that the DAO still retains the ability to resume the contracts
 # (or, in the GateSeal terms, "break the seal") prematurely.
-SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 MAX_SEAL_DURATION_DAYS: constant(uint256) = 14
 MAX_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_SEAL_DURATION_DAYS
 
@@ -49,6 +49,10 @@ MAX_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_SEAL_DURATI
 # however, there is a non-zero chance that there might be more in the future, which
 # is why we've opted to use a dynamic-size array.
 MAX_SEALABLES: constant(uint256) = 8
+
+# The maximum GateSeal expiry duration is 1 year.
+MAX_EXPIRY_PERIOD_DAYS: constant(uint256) = 365
+MAX_EXPIRY_PERIOD_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_EXPIRY_PERIOD_DAYS
 
 # To simplify the code, we chose not to implement committees in GateSeals.
 # Instead, GateSeals are operated by a single account which must be a multisig.
@@ -78,13 +82,14 @@ def __init__(
     _sealing_committee: address,
     _seal_duration_seconds: uint256,
     _sealables: DynArray[address, MAX_SEALABLES],
-    _expiry_period_seconds: uint256
+    _expiry_timestamp: uint256
 ):
     assert _sealing_committee != empty(address), "sealing committee: zero address"
     assert _seal_duration_seconds != 0, "seal duration: zero"
     assert _seal_duration_seconds <= MAX_SEAL_DURATION_SECONDS, "seal duration: exceeds max"
     assert len(_sealables) > 0, "sealables: empty list"
-    assert _expiry_period_seconds != 0, "expiry period: zero"
+    assert _expiry_timestamp > block.timestamp, "expiry timestamp: must be in the future"
+    assert _expiry_timestamp <= block.timestamp + MAX_EXPIRY_PERIOD_SECONDS, "expiry timestamp: exceeds max expiry period"
 
     SEALING_COMMITTEE = _sealing_committee
     SEAL_DURATION_SECONDS = _seal_duration_seconds
@@ -93,7 +98,7 @@ def __init__(
         assert sealable != empty(address), "sealables: includes zero address"
         self.sealables.append(sealable)
     
-    self.expiry_timestamp = block.timestamp + _expiry_period_seconds
+    self.expiry_timestamp = _expiry_timestamp
 
 
 @external

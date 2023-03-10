@@ -23,8 +23,8 @@ def main():
     sealables = load_env_variable("SEALABLES").split(",")
     logger.success(f"Sealables: {sealables}")
 
-    expiry_period = int(load_env_variable("EXPIRY_PERIOD"))
-    logger.success(f"Sealables: {expiry_period}")
+    expiry_timestamp = int(load_env_variable("EXPIRY_TIMESTAMP"))
+    logger.success(f"Sealables: {expiry_timestamp}")
 
     factory = project.GateSealFactory.at(to_checksum_address(factory_address))
 
@@ -32,7 +32,7 @@ def main():
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        expiry_period,
+        expiry_timestamp,
         sender=deployer,
     )
 

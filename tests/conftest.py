@@ -1,9 +1,8 @@
-from random import randint
 import pytest
-import ape
+from random import randint
 from ape.logging import logger
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
-from utils.constants import MAX_SEALABLES, MIN_SEALABLES
+from utils.constants import MAX_EXPIRY_PERIOD_SECONDS, MAX_SEALABLES, MIN_SEALABLES
 
 """
 
@@ -59,13 +58,13 @@ def gate_seal(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    expiry_period,
+    expiry_timestamp,
 ):
     transaction = gate_seal_factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        expiry_period,
+        expiry_timestamp,
         sender=deployer,
     )
 
@@ -87,28 +86,23 @@ def sealables(generate_sealables):
 
 
 @pytest.fixture(scope="session")
-def seal_duration_seconds(week):
-    return week
+def seal_duration_seconds(day):
+    return day * 7
 
 
-@pytest.fixture(scope="session")
-def expiry_period(year):
-    return year
+@pytest.fixture(scope="function")
+def expiry_timestamp(now):
+    return now + MAX_EXPIRY_PERIOD_SECONDS
+
+
+@pytest.fixture(scope="function")
+def now(chain):
+    return chain.pending_timestamp
 
 
 @pytest.fixture(scope="session")
 def day():
     return 60 * 60 * 24
-
-
-@pytest.fixture(scope="session")
-def week(day):
-    return day * 7
-
-
-@pytest.fixture(scope="session")
-def year(day):
-    return day * 365
 
 
 """

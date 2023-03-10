@@ -1,9 +1,9 @@
 from ape.logging import logger
-
+from datetime import datetime
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 
 
-def test_happy_path(project, accounts):
+def test_happy_path(networks, chain, project, accounts):
     DEPLOYER = accounts[0]
 
     # Step 1. Get the GateSeal bytecode
@@ -31,14 +31,17 @@ def test_happy_path(project, accounts):
     SEALABLES = []
     for _ in range(8):
         SEALABLES.append(project.SealableMock.deploy(sender=DEPLOYER))
-    EXPIRY_TIMESTAMP = 60 * 60 * 24 * 365  # one year
+
+    now = chain.pending_timestamp
+
+    EXPIRY_DURATION = 60 * 60 * 24 * 365  # 1 year
 
     # Step 6. Create a GateSeal using the factory
     transaction = gate_seal_factory.create_gate_seal(
         SEALING_COMMITTEE,
         SEAL_DURATION_SECONDS,
         SEALABLES,
-        EXPIRY_TIMESTAMP,
+        now + EXPIRY_DURATION,
         sender=DEPLOYER,
     )
 
