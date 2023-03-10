@@ -149,3 +149,13 @@ def test_seal_partial(project, gate_seal, sealing_committee, sealables):
             assert sealable_contract.isPaused(), "sealable must be sealed"
         else:
             assert not sealable_contract.isPaused(), "sealable must not be sealed"
+
+
+def test_seal_empty_subset(gate_seal, sealing_committee):
+    with reverts("sealables: empty subset"):
+        gate_seal.seal([], sender=sealing_committee)
+
+
+def test_seal_nonintersecting_subset(accounts, gate_seal, sealing_committee):
+    with reverts("sealables: includes a non-sealable"):
+        gate_seal.seal([accounts[0]], sender=sealing_committee)
