@@ -8,7 +8,7 @@ def isPaused() -> bool:
 
 
 @external
-def pause(_duration: uint256):
+def pauseFor(_duration: uint256):
     if not self._is_paused():
         self.resumed_timestamp = block.timestamp + _duration
 
