@@ -29,7 +29,7 @@ def sealing_committee(accounts):
 
 @pytest.fixture(scope="session")
 def stranger(accounts):
-    return accounts[2]
+    return accounts[3]
 
 
 """
