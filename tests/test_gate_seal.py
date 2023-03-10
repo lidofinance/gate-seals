@@ -64,9 +64,15 @@ def test_seal_duration_exceeds_max(
         )
 
 
-def test_sealables_cannot_be_empty_list(
-    project, deployer, sealing_committee, seal_duration_seconds, expiry_period
+def test_sealables_exceeds_max(
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    expiry_period,
+    generate_sealables,
 ):
+    sealables = generate_sealables(MAX_SEALABLES)
     with reverts("sealables: empty list"):
         project.GateSeal.deploy(
             sealing_committee, seal_duration_seconds, [], expiry_period, sender=deployer
@@ -208,3 +214,35 @@ def test_seal_partially_intersecting_subset(
 ):
     with reverts("sealables: includes a non-sealable"):
         gate_seal.seal([sealables[0], accounts[0]], sender=sealing_committee)
+
+
+def test_natural_expiry(
+    networks,
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+    expiry_period,
+):
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        seal_duration_seconds,
+        sealables,
+        expiry_period,
+        sender=deployer,
+    )
+
+    deployed_block_number = gate_seal._cached_receipt.block_number
+    deployed_timestamp = project.provider.get_block(deployed_block_number).timestamp
+    expiry_timestamp = deployed_timestamp + expiry_period
+
+    networks.active_provider.set_timestamp(expiry_timestamp)
+    networks.active_provider.mine()
+
+    assert not gate_seal.is_expired(), "expired prematurely"
+
+    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    networks.active_provider.mine()
+
+    assert gate_seal.is_expired(), "must already be expired"
