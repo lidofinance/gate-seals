@@ -246,3 +246,10 @@ def test_natural_expiry(
     networks.active_provider.mine()
 
     assert gate_seal.is_expired(), "must already be expired"
+
+
+def test_seal_only_once(gate_seal, sealing_committee, sealables):
+    gate_seal.seal(sealables, sender=sealing_committee)
+
+    with reverts("gate seal: expired"):
+        gate_seal.seal(sealables, sender=sealing_committee)
