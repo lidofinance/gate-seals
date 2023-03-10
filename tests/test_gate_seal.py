@@ -1,3 +1,4 @@
+from asyncio import events
 from ape import reverts
 from ape.logging import logger
 import pytest
@@ -184,8 +185,19 @@ def test_deploy_params_must_match(
     assert gate_seal.is_expired() == False, "should not be expired"
 
 
-def test_seal_all(project, gate_seal, sealing_committee, sealables):
-    gate_seal.seal(sealables, sender=sealing_committee)
+def test_seal_all(chain, project, gate_seal, sealing_committee, sealables):
+    expected_timestamp = chain.pending_timestamp
+    tx = gate_seal.seal(sealables, sender=sealing_committee)
+    expired_event = next(
+        (event for event in tx.events if event.event_name == "ExpiredPrematurely"), None
+    )
+    assert expired_event, "ExpiredPrematurely event present"
+    assert (
+        expired_event.expired_timestamp == expected_timestamp
+    ), "expiry timestamp matches"
+
+    assert gate_seal.get_expiry_timestamp() == 0, "expiry timestamp is not 0"
+
     assert (
         gate_seal.is_expired() == True
     ), "gate seal must be expired immediately after sealing"
