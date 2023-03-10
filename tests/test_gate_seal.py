@@ -2,7 +2,7 @@ from ape import reverts
 from ape.logging import logger
 import pytest
 
-from utils.constants import MAX_SEALABLES, ZERO_ADDRESS
+from utils.constants import MAX_SEAL_DURATION_SECONDS, MAX_SEALABLES, ZERO_ADDRESS
 
 
 def test_committee_cannot_be_zero_address(
@@ -24,6 +24,43 @@ def test_seal_duration_cannot_be_zero(
     with reverts("seal duration: zero"):
         project.GateSeal.deploy(
             sealing_committee, 0, sealables, expiry_period, sender=deployer
+        )
+
+
+def test_seal_duration_max(
+    project,
+    deployer,
+    sealing_committee,
+    sealables,
+    expiry_period,
+):
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        MAX_SEAL_DURATION_SECONDS,
+        sealables,
+        expiry_period,
+        sender=deployer,
+    )
+
+    assert (
+        gate_seal.get_seal_duration_seconds() == MAX_SEAL_DURATION_SECONDS
+    ), "seal duration can be up to 14 days"
+
+
+def test_seal_duration_exceeds_max(
+    project,
+    deployer,
+    sealing_committee,
+    sealables,
+    expiry_period,
+):
+    with reverts("seal duration: exceeds max"):
+        project.GateSeal.deploy(
+            sealing_committee,
+            MAX_SEAL_DURATION_SECONDS + 1,
+            sealables,
+            expiry_period,
+            sender=deployer,
         )
 
 
