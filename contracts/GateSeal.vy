@@ -144,8 +144,13 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
 
     self._expire_immediately()
     
+    # keep track of sealables which have already been sealed to revert on duplicates
+    sealed: DynArray[address, MAX_SEALABLES] = []
+
     for sealable in _sealables:
         assert sealable in self.sealables, "sealables: includes a non-sealable"
+        assert not sealable in sealed, "sealables: includes duplicates"
+        sealed.append(sealable)
 
         pausable: IPausableUntil = IPausableUntil(sealable)
         pausable.pauseFor(SEAL_DURATION_SECONDS)

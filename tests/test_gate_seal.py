@@ -220,6 +220,12 @@ def test_seal_empty_subset(gate_seal, sealing_committee):
         gate_seal.seal([], sender=sealing_committee)
 
 
+def test_seal_duplicates(gate_seal, sealables, sealing_committee):
+    sealables_with_duplicates = sealables + [sealables[0]]
+    with reverts("sealables: includes duplicates"):
+        gate_seal.seal(sealables_with_duplicates, sender=sealing_committee)
+
+
 def test_seal_nonintersecting_subset(accounts, gate_seal, sealing_committee):
     with reverts("sealables: includes a non-sealable"):
         gate_seal.seal([accounts[0]], sender=sealing_committee)
