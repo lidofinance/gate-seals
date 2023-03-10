@@ -159,3 +159,10 @@ def test_seal_empty_subset(gate_seal, sealing_committee):
 def test_seal_nonintersecting_subset(accounts, gate_seal, sealing_committee):
     with reverts("sealables: includes a non-sealable"):
         gate_seal.seal([accounts[0]], sender=sealing_committee)
+
+
+def test_seal_partially_intersecting_subset(
+    accounts, gate_seal, sealing_committee, sealables
+):
+    with reverts("sealables: includes a non-sealable"):
+        gate_seal.seal([sealables[0], accounts[0]], sender=sealing_committee)
