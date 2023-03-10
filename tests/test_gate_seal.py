@@ -135,7 +135,7 @@ def test_seal_all(project, gate_seal, sealing_committee, sealables):
         assert project.SealableMock.at(sealable).isPaused(), "sealable must be sealed"
 
 
-def test_seal_one(project, gate_seal, sealing_committee, sealables):
+def test_seal_partial(project, gate_seal, sealing_committee, sealables):
     sealable_to_seal = sealables[0]
 
     gate_seal.seal([sealable_to_seal], sender=sealing_committee)
@@ -143,6 +143,9 @@ def test_seal_one(project, gate_seal, sealing_committee, sealables):
         gate_seal.is_expired() == True
     ), "gate seal must be expired immediately after sealing"
 
-    assert project.SealableMock.at(
-        sealable_to_seal
-    ).isPaused(), "sealable must be sealed"
+    for sealable in sealables:
+        sealable_contract = project.SealableMock.at(sealable)
+        if sealable == sealable_to_seal:
+            assert sealable_contract.isPaused(), "sealable must be sealed"
+        else:
+            assert not sealable_contract.isPaused(), "sealable must not be sealed"
