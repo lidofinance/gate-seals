@@ -87,10 +87,11 @@ ape run scripts/deploy_factory.py
 ```
 
 3. Add the GateSeal configuration to environment variables.
-- `FACTORY` - address of the GateSealFactory deployed in Step 1,
-- `SEALING_COMMITTEE` - address of the sealing committee,
-- `SEAL_DURATION_SECONDS` - duration of the seal in seconds,
+- `FACTORY` - address of the GateSealFactory deployed in Step 1;
+- `SEALING_COMMITTEE` - address of the sealing committee;
+- `SEAL_DURATION_SECONDS` - duration of the seal in seconds;
 - `SEALABLES` - a comma-separated list of pausable contracts;
+- `EXPIRY_TIMESTAMP` - a unix epoch when GateSeal expires.
 
 4. Deploy the GateSeal using the deployed factory
 ```shell
