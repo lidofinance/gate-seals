@@ -69,8 +69,7 @@ SEALING_COMMITTEE: immutable(address)
 SEAL_DURATION_SECONDS: immutable(uint256)
 
 # The addresses of pausable contracts. The gate seal must have the permission to
-# pause these contracts at the time of the sealing. This means that the permissions
-# can be given in the same transaction as the sealing and revoked immediately after.
+# pause these contracts at the time of the sealing.
 # Sealing can be partial, meaning the committee may decide to pause only a subset of this list,
 # though GateSeal will still expire immediately.
 sealables: DynArray[address, MAX_SEALABLES]
