@@ -1,10 +1,10 @@
-from ape import chain, accounts
+from ape import chain, accounts, api
 from ape.logging import logger
 from utils.constants import GOERLI_ID, MAINNET_ID
 from utils.env import load_env_variable
 
 
-def get_deployer() -> str:
+def get_deployer() -> api.accounts.AccountAPI:
     if not is_live_network():
         return accounts.test_accounts[0]
     else:

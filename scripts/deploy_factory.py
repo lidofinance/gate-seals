@@ -1,13 +1,13 @@
+from ape import networks, project
 from ape.logging import logger
+
 from utils.blueprint import (
     construct_blueprint_deploy_bytecode,
+    deploy_blueprint,
     verify_blueprint_deploy_preamble,
     verify_eip522_blueprint,
-    deploy_blueprint,
 )
 from utils.config import get_deployer
-from utils.env import load_env_variable
-from ape import project, networks
 
 
 def main():
