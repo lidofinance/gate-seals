@@ -60,6 +60,11 @@ poetry install
 yarn
 ```
 
+4. (optional) set `MAINNET_RPC_ENDPOINT` environment variable for mainnet forking
+```shell
+export MAINNET_RPC_ENDPOINT=<your-mainnet-rpc-endpoint>
+```
+
 ### Test
 
 By default tests run on the local Hardhat network,
@@ -68,7 +73,24 @@ ape test
 ```
 
 ### Deploy
-TODO
 
-## Helpful links
-TODO
+1. Set the deployer alias;
+```shell
+export DEPLOYER=<your-ape-account-alias>
+```
+
+2. Deploy the GateSeal blueprint and GateSealFactory;
+```shell
+ape run scripts/deploy_factory.py
+```
+
+3. Add the GateSeal configuration to environment variables.
+- `FACTORY` - address of the GateSealFactory deployed in Step 1,
+- `SEALING_COMMITTEE` - address of the sealing committee,
+- `SEAL_DURATION_SECONDS` - duration of the seal in seconds,
+- `SEALABLES` - a comma-separated list of pausable contracts;
+
+4. Deploy the GateSeal using the deployed factory
+```shell
+ape run scripts/deploy_gate_seal.py
+```
