@@ -14,12 +14,12 @@ To put such crucial components of the Lido protocol as `WithdrawalQueue` and `Va
 
 Each GateSeal is operated by a committee, essentially a multisig account responsible for pulling the break in case things go awry. However, authorizing a committee to pause/resume the protocol withdrawals would be utterly reckless which is why GateSeals have a number of safeguards in place:
 - each GateSeal can only be activated only once and becomes unusable immediately after,
-- each GateSeal can only be activated within its expiry period of 1 year maximum and becomes unusuable past its expiry timestamp even if it was never triggered,
+- each GateSeal can only be activated within its expiry period of 1 year maximum and becomes unusable past its expiry timestamp even if it was never triggered,
 - the pause duration set at costruction time is limited to 14 days.
 
 Thus, the biggest damage a compromised GateSeal multisig can inflict is to pause withdrawals for 14 days, given the DAO does not resume withdrawals sooner via the governance voting.
 
-With all that said, it still is undesireable for a decentralized protocol to rely on a multisig in any capacity. Which is why GateSeals are only a temporary solution; their limited lifespan and one-time use design are also act as a kind of "inconvenience bomb", in that once expired, the GateSeal must be replaced and setup anew.
+With all that said, it still is undesireable for a decentralized protocol to rely on a multisig in any capacity. Which is why GateSeals are only a temporary solution; their limited lifespan and one-time use design also act as a kind of "inconvenience bomb", in that once expired, the GateSeal must be replaced and setup anew.
 
 ## How does it work?
 
@@ -31,7 +31,7 @@ A GateSeal is set up with an immutable configuration at the time of construction
 - the sealables, a list of contracts to be sealed,
 - the expiry period, a period after which the GateSeal becomes unusable. 
 
-If an emergency arises, the sealing committee simply calls the seal function and puts the contracts on pause for the set duration. 
+Important to note, that GateSeals do not bypass the access control settings for pausable contracts, which is why GateSeals must be given the appropriate permissions beforehand. If and when an emergency arises, the sealing committee simply calls the seal function and puts the contracts on pause for the set duration. 
 
 ## How are GateSeals created?
 
