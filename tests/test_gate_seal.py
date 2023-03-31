@@ -5,6 +5,7 @@ import pytest
 from utils.constants import (
     MAX_SEAL_DURATION_SECONDS,
     MAX_SEALABLES,
+    MIN_SEAL_DURATION_SECONDS,
     ZERO_ADDRESS,
 )
 
@@ -22,13 +23,33 @@ def test_committee_cannot_be_zero_address(
         )
 
 
-def test_seal_duration_cannot_be_zero(
+def test_seal_duration_too_short(
     project, deployer, sealing_committee, sealables, expiry_timestamp
 ):
-    with reverts("seal duration: zero"):
+    with reverts("seal duration: too short"):
         project.GateSeal.deploy(
-            sealing_committee, 0, sealables, expiry_timestamp, sender=deployer
+            sealing_committee,
+            MIN_SEAL_DURATION_SECONDS - 1,
+            sealables,
+            expiry_timestamp,
+            sender=deployer,
         )
+
+
+def test_seal_duration_shortest(
+    project, deployer, sealing_committee, sealables, expiry_timestamp
+):
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        MIN_SEAL_DURATION_SECONDS,
+        sealables,
+        expiry_timestamp,
+        sender=deployer,
+    )
+
+    assert (
+        gate_seal.get_seal_duration_seconds() == MIN_SEAL_DURATION_SECONDS
+    ), "seal duration can be at least 4 days"
 
 
 def test_seal_duration_max(

@@ -41,6 +41,11 @@ interface IPausableUntil:
 
 SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 
+# The minimum allowed seal duration is 4 days. This is because it takes at least
+# 3 days to pass and enact. Additionally, we want to include a 1-day padding.
+MIN_SEAL_DURATION_DAYS: constant(uint256) = 4
+MIN_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_SEAL_DURATION_DAYS
+
 # The maximum allowed seal duration is 14 days.
 # Anything higher than that may be too long of a disruption for the protocol.
 # Keep in mind, that the DAO still retains the ability to resume the contracts
@@ -88,7 +93,7 @@ def __init__(
     _expiry_timestamp: uint256
 ):
     assert _sealing_committee != empty(address), "sealing committee: zero address"
-    assert _seal_duration_seconds != 0, "seal duration: zero"
+    assert _seal_duration_seconds >= MIN_SEAL_DURATION_SECONDS, "seal duration: too short"
     assert _seal_duration_seconds <= MAX_SEAL_DURATION_SECONDS, "seal duration: exceeds max"
     assert len(_sealables) > 0, "sealables: empty list"
     assert _expiry_timestamp > block.timestamp, "expiry timestamp: must be in the future"
