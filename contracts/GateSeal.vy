@@ -99,6 +99,7 @@ def __init__(
 
     for sealable in _sealables:
         assert sealable != empty(address), "sealables: includes zero address"
+        assert not sealable in self.sealables, "sealables: includes duplicates"
         self.sealables.append(sealable)
     
     self.expiry_timestamp = _expiry_timestamp

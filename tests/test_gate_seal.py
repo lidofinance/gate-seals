@@ -1,4 +1,3 @@
-from asyncio import events
 from ape import reverts
 from ape.logging import logger
 import pytest
@@ -131,6 +130,26 @@ def test_sealables_cannot_include_zero_address(
             sealing_committee,
             seal_duration_seconds,
             sealables,
+            expiry_timestamp,
+            sender=deployer,
+        )
+
+
+def test_sealables_cannot_include_duplicates(
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+    expiry_timestamp,
+):
+    sealables_with_duplicates = sealables + [sealables[0]]
+
+    with reverts("sealables: includes duplicates"):
+        project.GateSeal.deploy(
+            sealing_committee,
+            seal_duration_seconds,
+            sealables_with_duplicates,
             expiry_timestamp,
             sender=deployer,
         )
