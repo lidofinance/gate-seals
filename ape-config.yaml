@@ -15,8 +15,12 @@ hardhat:
     ethereum:
       mainnet:
         upstream_provider: infura
+      goerli:
+        upstream_provider: infura
 
 geth:
   ethereum:
     mainnet:
       uri: ${MAINNET_RPC_ENDPOINT}
+    goerli:
+      uri: ${GOERLI_RPC_ENDPOINT}
