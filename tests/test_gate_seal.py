@@ -251,7 +251,6 @@ def test_seal_all(
         gate_seal.get_expiry_timestamp() == expected_timestamp
     ), "expiry timestamp matches"
 
-    networks.active_provider.mine()
     assert (
         gate_seal.is_expired() == True
     ), "gate seal must be expired immediately after sealing"
@@ -282,7 +281,6 @@ def test_seal_partial(
         assert event.sealable == sealables_to_seal[i]
         assert event.sealed_at == expected_timestamp
 
-    networks.active_provider.mine()
     assert (
         gate_seal.is_expired() == True
     ), "gate seal must be expired immediately after sealing"
@@ -340,12 +338,12 @@ def test_natural_expiry(
         sender=deployer,
     )
 
-    networks.active_provider.set_timestamp(expiry_timestamp)
+    networks.active_provider.set_timestamp(expiry_timestamp - 1)
     networks.active_provider.mine()
 
     assert not gate_seal.is_expired(), "expired prematurely"
 
-    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    networks.active_provider.set_timestamp(expiry_timestamp)
     networks.active_provider.mine()
 
     assert gate_seal.is_expired(), "must already be expired"
@@ -418,3 +416,10 @@ def test_several_failed_sealables_error_message(
             sealables,
             sender=sealing_committee,
         )
+
+
+@pytest.mark.skip("only run this with automining disabled")
+def test_cannot_seal_twice_in_one_tx(gate_seal, sealables, sealing_committee):
+    gate_seal.seal(sealables, sender=sealing_committee)
+    with reverts("gate seal: expired"):
+        gate_seal.seal(sealables, sender=sealing_committee)

@@ -10,7 +10,12 @@ module.exports = {
         mnemonic: "test test test test test test test test test test test junk",
         path: "m/44'/60'/0'",
         count: 10
-      }
+      },
+      // uncomment for test_cannot_seal_twice_in_one_tx test
+      // mining: {
+      //   auto: false,
+      //   interval: 1000
+      // }
     },
   },
 };

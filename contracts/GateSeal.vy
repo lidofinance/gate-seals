@@ -221,7 +221,7 @@ def assert_all_sealed(_failed_indexes: DynArray[uint256, MAX_SEALABLES]):
 @internal
 @view
 def _is_expired() -> bool:
-    return block.timestamp > self.expiry_timestamp
+    return block.timestamp >= self.expiry_timestamp
 
 
 @internal
