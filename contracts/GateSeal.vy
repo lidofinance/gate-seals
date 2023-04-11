@@ -213,6 +213,7 @@ def assert_all_sealed(_failed_indexes: DynArray[uint256, MAX_SEALABLES]):
         loop_index += 1
 
     # generate error message with indexes as a decimal string
+    # return type of `uint2str` is String[78] because 2^256 has 78 digits
     error_message: String[78] = uint2str(indexes_as_decimal)
 
     # assert that there are no failed indexes, else revert with error message
