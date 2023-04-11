@@ -61,5 +61,4 @@ def test_happy_path(networks, chain, project, accounts):
     gate_seal.seal([SEALABLE], sender=SEALING_COMMITTEE)
     assert project.SealableMock.at(SEALABLE).isPaused(), "failed to seal"
 
-    networks.active_provider.mine()
     assert gate_seal.is_expired(), "must be expired after sealing all"
