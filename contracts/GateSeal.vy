@@ -94,23 +94,13 @@ def __init__(
     assert len(_sealables) > 0, "sealables: empty list"
     assert _expiry_timestamp > block.timestamp, "expiry timestamp: must be in the future"
     assert _expiry_timestamp <= block.timestamp + MAX_EXPIRY_PERIOD_SECONDS, "expiry timestamp: exceeds max expiry period"
+    for sealable in _sealables:
+        assert sealable != empty(address), "sealables: includes zero address"
+    assert not self.has_duplicates(_sealables), "sealables: includes duplicates"
 
     SEALING_COMMITTEE = _sealing_committee
     SEAL_DURATION_SECONDS = _seal_duration_seconds
-
-    # Create a new list to store unique addresses.
-    # We iterate over `_sealables` and check if each sealable is not already in the new list.
-    # If not, we append it to the new list, ensuring that only unique addresses are stored.
-    # If a duplicate is found, we stop execution as the new list serves as a flag for duplicates.
-    # Note, we use a memory list instead of `self.sealables` to reduce the number of reads/writes to storage.
-    non_duplicates: DynArray[address, MAX_SEALABLES] = []
-
-    for sealable in _sealables:
-        assert sealable != empty(address), "sealables: includes zero address"
-        assert sealable not in non_duplicates, "sealables: includes duplicates"
-        non_duplicates.append(sealable)
-    
-    self.sealables = non_duplicates
+    self.sealables = _sealables
     self.expiry_timestamp = _expiry_timestamp
 
 
@@ -154,14 +144,9 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
     assert len(_sealables) > 0, "sealables: empty subset"
+    assert not self.has_duplicates(_sealables), "sealables: includes duplicates"
 
     self._expire_immediately()
-    
-    # Create a new list to store unique addresses.
-    # We iterate over `_sealables` and check if each sealable is not already in the new list.
-    # If not, we append it to the new list, ensuring that only unique addresses are stored.
-    # If a duplicate is found, we stop execution as the new list serves as a flag for duplicates.
-    non_duplicates: DynArray[address, MAX_SEALABLES] = []
 
     # Instead of reverting the transaction as soon as one of the sealables fails,
     # we iterate through the entire list and collect the indexes of those that failed
@@ -172,9 +157,6 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
 
     for sealable in _sealables:
         assert sealable in self.sealables, "sealables: includes a non-sealable"
-        assert sealable not in non_duplicates, "sealables: includes duplicates"
-
-        non_duplicates.append(sealable)
 
         pausable: IPausableUntil = IPausableUntil(sealable)
         pausable.pauseFor(SEAL_DURATION_SECONDS)
@@ -186,11 +168,40 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     
         sealable_index += 1
 
-    self.assert_all_sealed(failed_indexes)
+    assert len(failed_indexes) == 0, self.to_error_string(failed_indexes)
 
 
 @internal
-def assert_all_sealed(_failed_indexes: DynArray[uint256, MAX_SEALABLES]):
+@view
+def _is_expired() -> bool:
+    return block.timestamp >= self.expiry_timestamp
+
+
+@internal
+def _expire_immediately():
+    self.expiry_timestamp = block.timestamp
+
+
+@internal
+@pure
+def has_duplicates(_sealables: DynArray[address, MAX_SEALABLES]) -> bool:
+    """
+    @notice checks the list for duplicates 
+    @param  _sealables list of addresses to check
+    """
+    unique: DynArray[address, MAX_SEALABLES] = []
+
+    for sealable in _sealables:
+        if sealable in unique:
+            return True
+        unique.append(sealable)
+
+    return False
+
+
+@internal
+@pure
+def to_error_string(_failed_indexes: DynArray[uint256, MAX_SEALABLES]) -> String[78]:
     """
     @notice reverts if `_failed_indexes` is not empty and report the indexes
             in the error message.
@@ -217,14 +228,4 @@ def assert_all_sealed(_failed_indexes: DynArray[uint256, MAX_SEALABLES]):
     error_message: String[78] = uint2str(indexes_as_decimal)
 
     # assert that there are no failed indexes, else revert with error message
-    assert len(_failed_indexes) == 0, error_message
-
-@internal
-@view
-def _is_expired() -> bool:
-    return block.timestamp >= self.expiry_timestamp
-
-
-@internal
-def _expire_immediately():
-    self.expiry_timestamp = block.timestamp
+    return error_message
