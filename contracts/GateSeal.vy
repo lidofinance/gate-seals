@@ -29,11 +29,7 @@ event Sealed:
     sealed_by: address
     sealed_for: uint256
     sealable: address
-
-
-event ExpiredPrematurely:
-    expired_timestamp: uint256
-
+    sealed_at: uint256
 
 interface IPausableUntil:
     def pauseFor(_duration: uint256): nonpayable
@@ -98,15 +94,13 @@ def __init__(
     assert len(_sealables) > 0, "sealables: empty list"
     assert _expiry_timestamp > block.timestamp, "expiry timestamp: must be in the future"
     assert _expiry_timestamp <= block.timestamp + MAX_EXPIRY_PERIOD_SECONDS, "expiry timestamp: exceeds max expiry period"
+    for sealable in _sealables:
+        assert sealable != empty(address), "sealables: includes zero address"
+    assert not self.has_duplicates(_sealables), "sealables: includes duplicates"
 
     SEALING_COMMITTEE = _sealing_committee
     SEAL_DURATION_SECONDS = _seal_duration_seconds
-
-    for sealable in _sealables:
-        assert sealable != empty(address), "sealables: includes zero address"
-        assert not sealable in self.sealables, "sealables: includes duplicates"
-        self.sealables.append(sealable)
-    
+    self.sealables = _sealables
     self.expiry_timestamp = _expiry_timestamp
 
 
@@ -150,31 +144,89 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
     assert len(_sealables) > 0, "sealables: empty subset"
+    assert not self.has_duplicates(_sealables), "sealables: includes duplicates"
 
     self._expire_immediately()
-    
-    # keep track of sealables which have already been sealed to revert on duplicates
-    sealed: DynArray[address, MAX_SEALABLES] = []
+
+    # Instead of reverting the transaction as soon as one of the sealables fails,
+    # we iterate through the entire list and collect the indexes of those that failed
+    # and report them in the dynamically-generated error message.
+    # This will make it easier for us to debug in a hectic situation.
+    failed_indexes: DynArray[uint256, MAX_SEALABLES] = []
+    sealable_index: uint256 = 0
 
     for sealable in _sealables:
         assert sealable in self.sealables, "sealables: includes a non-sealable"
-        assert not sealable in sealed, "sealables: includes duplicates"
-        sealed.append(sealable)
 
-        pausable: IPausableUntil = IPausableUntil(sealable)
-        pausable.pauseFor(SEAL_DURATION_SECONDS)
-        assert pausable.isPaused(), "sealables: failed to seal"
+        success: bool = False
 
-        log Sealed(self, SEALING_COMMITTEE, SEAL_DURATION_SECONDS, sealable)
+        # using `raw_call` to catch external revert and continue execution
+        success = raw_call(
+            sealable,
+            _abi_encode(SEAL_DURATION_SECONDS, method_id=method_id("pauseFor(uint256)")),
+            revert_on_failure=False
+        )
+        
+        if success and IPausableUntil(sealable).isPaused():
+            log Sealed(self, SEALING_COMMITTEE, SEAL_DURATION_SECONDS, sealable, block.timestamp)
+        else:
+            failed_indexes.append(sealable_index)
+    
+        sealable_index += 1
 
-    log ExpiredPrematurely(block.timestamp)
+    assert len(failed_indexes) == 0, self.to_error_string(failed_indexes)
+
 
 @internal
 @view
 def _is_expired() -> bool:
-    return block.timestamp > self.expiry_timestamp
+    return block.timestamp >= self.expiry_timestamp
 
 
 @internal
 def _expire_immediately():
-    self.expiry_timestamp = 0
+    self.expiry_timestamp = block.timestamp
+
+
+@internal
+@pure
+def has_duplicates(_sealables: DynArray[address, MAX_SEALABLES]) -> bool:
+    """
+    @notice checks the list for duplicates 
+    @param  _sealables list of addresses to check
+    """
+    unique: DynArray[address, MAX_SEALABLES] = []
+
+    for sealable in _sealables:
+        if sealable in unique:
+            return True
+        unique.append(sealable)
+
+    return False
+
+
+@internal
+@pure
+def to_error_string(_failed_indexes: DynArray[uint256, MAX_SEALABLES]) -> String[78]:
+    """
+    @notice converts a list of indexes into an error message to faciliate debugging
+    @dev    The indexes in the error message are given in the descending order to avoid
+            losing leading zeros when casting to string,
+
+            e.g. [0, 2, 3, 6] -> "6320"
+    @param _failed_indexes a list of sealable indexes that failed to seal 
+    """
+    indexes_as_decimal: uint256 = 0
+    loop_index: uint256 = 0
+
+    # convert failed indexes to a decimal representation
+    for failed_index in _failed_indexes:
+        indexes_as_decimal += failed_index * 10 ** loop_index
+        loop_index += 1
+
+    # generate error message with indexes as a decimal string
+    # return type of `uint2str` is String[78] because 2^256 has 78 digits
+    error_message: String[78] = uint2str(indexes_as_decimal)
+
+    # assert that there are no failed indexes, else revert with error message
+    return error_message

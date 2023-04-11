@@ -1,6 +1,8 @@
 from ape import reverts
 from ape.logging import logger
 import pytest
+import random
+
 
 from utils.constants import (
     MAX_SEAL_DURATION_SECONDS,
@@ -164,13 +166,13 @@ def test_sealables_cannot_include_duplicates(
     sealables,
     expiry_timestamp,
 ):
-    sealables_with_duplicates = sealables + [sealables[0]]
+    sealables.append(sealables[0])
 
     with reverts("sealables: includes duplicates"):
         project.GateSeal.deploy(
             sealing_committee,
             seal_duration_seconds,
-            sealables_with_duplicates,
+            sealables,
             expiry_timestamp,
             sender=deployer,
         )
@@ -225,18 +227,29 @@ def test_deploy_params_must_match(
     assert gate_seal.is_expired() == False, "should not be expired"
 
 
-def test_seal_all(chain, project, gate_seal, sealing_committee, sealables):
+def test_seal_all(
+    networks,
+    chain,
+    project,
+    gate_seal,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+):
     expected_timestamp = chain.pending_timestamp
     tx = gate_seal.seal(sealables, sender=sealing_committee)
-    expired_event = next(
-        (event for event in tx.events if event.event_name == "ExpiredPrematurely"), None
-    )
-    assert expired_event, "ExpiredPrematurely event present"
-    assert (
-        expired_event.expired_timestamp == expected_timestamp
-    ), "expiry timestamp matches"
 
-    assert gate_seal.get_expiry_timestamp() == 0, "expiry timestamp is not 0"
+    for i, event in enumerate(tx.events):
+        assert event.event_name == "Sealed"
+        assert event.gate_seal == gate_seal.address
+        assert event.sealed_by == sealing_committee
+        assert event.sealed_for == seal_duration_seconds
+        assert event.sealable == sealables[i]
+        assert event.sealed_at == expected_timestamp
+
+    assert (
+        gate_seal.get_expiry_timestamp() == expected_timestamp
+    ), "expiry timestamp matches"
 
     assert (
         gate_seal.is_expired() == True
@@ -246,17 +259,35 @@ def test_seal_all(chain, project, gate_seal, sealing_committee, sealables):
         assert project.SealableMock.at(sealable).isPaused(), "sealable must be sealed"
 
 
-def test_seal_partial(project, gate_seal, sealing_committee, sealables):
-    sealable_to_seal = sealables[0]
+def test_seal_partial(
+    networks,
+    chain,
+    project,
+    gate_seal,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+):
+    expected_timestamp = chain.pending_timestamp
+    sealables_to_seal = [sealables[0]]
 
-    gate_seal.seal([sealable_to_seal], sender=sealing_committee)
+    tx = gate_seal.seal(sealables_to_seal, sender=sealing_committee)
+
+    for i, event in enumerate(tx.events):
+        assert event.event_name == "Sealed"
+        assert event.gate_seal == gate_seal.address
+        assert event.sealed_by == sealing_committee
+        assert event.sealed_for == seal_duration_seconds
+        assert event.sealable == sealables_to_seal[i]
+        assert event.sealed_at == expected_timestamp
+
     assert (
         gate_seal.is_expired() == True
     ), "gate seal must be expired immediately after sealing"
 
     for sealable in sealables:
         sealable_contract = project.SealableMock.at(sealable)
-        if sealable == sealable_to_seal:
+        if sealable in sealables_to_seal:
             assert sealable_contract.isPaused(), "sealable must be sealed"
         else:
             assert not sealable_contract.isPaused(), "sealable must not be sealed"
@@ -273,9 +304,12 @@ def test_seal_empty_subset(gate_seal, sealing_committee):
 
 
 def test_seal_duplicates(gate_seal, sealables, sealing_committee):
-    sealables_with_duplicates = sealables + [sealables[0]]
+    if len(sealables) == MAX_SEALABLES:
+        sealables[-1] = sealables[0]
+    else:
+        sealables.append(sealables[0])
     with reverts("sealables: includes duplicates"):
-        gate_seal.seal(sealables_with_duplicates, sender=sealing_committee)
+        gate_seal.seal(sealables, sender=sealing_committee)
 
 
 def test_seal_nonintersecting_subset(accounts, gate_seal, sealing_committee):
@@ -307,12 +341,12 @@ def test_natural_expiry(
         sender=deployer,
     )
 
-    networks.active_provider.set_timestamp(expiry_timestamp)
+    networks.active_provider.set_timestamp(expiry_timestamp - 1)
     networks.active_provider.mine()
 
     assert not gate_seal.is_expired(), "expired prematurely"
 
-    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    networks.active_provider.set_timestamp(expiry_timestamp)
     networks.active_provider.mine()
 
     assert gate_seal.is_expired(), "must already be expired"
@@ -321,5 +355,76 @@ def test_natural_expiry(
 def test_seal_only_once(gate_seal, sealing_committee, sealables):
     gate_seal.seal(sealables, sender=sealing_committee)
 
+    with reverts("gate seal: expired"):
+        gate_seal.seal(sealables, sender=sealing_committee)
+
+
+@pytest.mark.parametrize("failing_index", range(MAX_SEALABLES))
+def test_single_failed_sealable_error_message(
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    expiry_timestamp,
+    failing_index,
+    generate_sealables,
+):
+    sealables = generate_sealables(MAX_SEALABLES)
+    unpausable = random.choice([True, False])
+    should_revert = not unpausable
+    sealables[failing_index] = generate_sealables(1, unpausable, should_revert)[0]
+
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        seal_duration_seconds,
+        sealables,
+        expiry_timestamp,
+        sender=deployer,
+    )
+
+    with reverts(f"{failing_index}"):
+        gate_seal.seal(
+            sealables,
+            sender=sealing_committee,
+        )
+
+
+@pytest.mark.parametrize("repeat", range(10))
+def test_several_failed_sealables_error_message(
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    expiry_timestamp,
+    generate_sealables,
+    repeat,
+):
+    sealables = generate_sealables(MAX_SEALABLES)
+
+    failed = random.sample(range(MAX_SEALABLES), random.choice(range(1, MAX_SEALABLES)))
+
+    for index in failed:
+        sealables[index] = generate_sealables(1, True)[0]
+
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        seal_duration_seconds,
+        sealables,
+        expiry_timestamp,
+        sender=deployer,
+    )
+
+    failed.sort()
+    failed.reverse()
+    with reverts("".join([str(n) for n in failed])):
+        gate_seal.seal(
+            sealables,
+            sender=sealing_committee,
+        )
+
+
+@pytest.mark.skip("only run this with automining disabled")
+def test_cannot_seal_twice_in_one_tx(gate_seal, sealables, sealing_committee):
+    gate_seal.seal(sealables, sender=sealing_committee)
     with reverts("gate seal: expired"):
         gate_seal.seal(sealables, sender=sealing_committee)
