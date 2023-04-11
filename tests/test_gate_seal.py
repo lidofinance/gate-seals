@@ -1,6 +1,8 @@
 from ape import reverts
 from ape.logging import logger
 import pytest
+import random
+
 
 from utils.constants import (
     MAX_SEAL_DURATION_SECONDS,
@@ -164,13 +166,13 @@ def test_sealables_cannot_include_duplicates(
     sealables,
     expiry_timestamp,
 ):
-    sealables_with_duplicates = sealables + [sealables[0]]
+    sealables[1] = sealables[0]
 
     with reverts("sealables: includes duplicates"):
         project.GateSeal.deploy(
             sealing_committee,
             seal_duration_seconds,
-            sealables_with_duplicates,
+            sealables,
             expiry_timestamp,
             sender=deployer,
         )
@@ -323,3 +325,65 @@ def test_seal_only_once(gate_seal, sealing_committee, sealables):
 
     with reverts("gate seal: expired"):
         gate_seal.seal(sealables, sender=sealing_committee)
+
+
+@pytest.mark.parametrize("unpausable_index", range(MAX_SEALABLES))
+def test_single_failed_sealable_error_message(
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    expiry_timestamp,
+    unpausable_index,
+    generate_sealables,
+):
+    sealables = generate_sealables(MAX_SEALABLES)
+    sealables[unpausable_index] = generate_sealables(1, True)[0]
+
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        seal_duration_seconds,
+        sealables,
+        expiry_timestamp,
+        sender=deployer,
+    )
+
+    with reverts(f"{unpausable_index}"):
+        gate_seal.seal(
+            sealables,
+            sender=sealing_committee,
+        )
+
+
+@pytest.mark.parametrize("repeat", range(10))
+def test_several_failed_sealables_error_message(
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    expiry_timestamp,
+    generate_sealables,
+    repeat,
+):
+    sealables = generate_sealables(MAX_SEALABLES)
+
+    failed = random.sample(range(MAX_SEALABLES), random.choice(range(1, MAX_SEALABLES)))
+
+    for index in failed:
+        sealables[index] = generate_sealables(1, True)[0]
+
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        seal_duration_seconds,
+        sealables,
+        expiry_timestamp,
+        sender=deployer,
+    )
+
+    failed.sort()
+    failed.reverse()
+    with reverts("".join([str(n) for n in failed])):
+        gate_seal.seal(
+            sealables,
+            sender=sealing_committee,
+        )

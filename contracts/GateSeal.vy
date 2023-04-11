@@ -153,21 +153,68 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
 
     self._expire_immediately()
     
-    # keep track of sealables which have already been sealed to revert on duplicates
-    sealed: DynArray[address, MAX_SEALABLES] = []
+    # Create a new list to store unique addresses.
+    # We iterate over `_sealables` and check if each sealable is not already in the new list.
+    # If not, we append it to the new list, ensuring that only unique addresses are stored.
+    # If a duplicate is found, we stop execution as the new list serves as a flag for duplicates.
+    non_duplicates: DynArray[address, MAX_SEALABLES] = []
+
+    # Instead of reverting the transaction as soon as one of the sealables fails,
+    # we iterate through the entire list and collect the indexes of those that failed
+    # and report them in the dynamically-generated error message.
+    # This will make it easier for us to debug in a hectic situation.
+    failed_indexes: DynArray[uint256, MAX_SEALABLES] = []
+    sealable_index: uint256 = 0
 
     for sealable in _sealables:
         assert sealable in self.sealables, "sealables: includes a non-sealable"
-        assert not sealable in sealed, "sealables: includes duplicates"
-        sealed.append(sealable)
+        assert sealable not in non_duplicates, "sealables: includes duplicates"
+
+        non_duplicates.append(sealable)
 
         pausable: IPausableUntil = IPausableUntil(sealable)
         pausable.pauseFor(SEAL_DURATION_SECONDS)
-        assert pausable.isPaused(), "sealables: failed to seal"
+        
+        if pausable.isPaused():
+            log Sealed(self, SEALING_COMMITTEE, SEAL_DURATION_SECONDS, sealable)
+        else:
+            failed_indexes.append(sealable_index)
+    
+        sealable_index += 1
 
-        log Sealed(self, SEALING_COMMITTEE, SEAL_DURATION_SECONDS, sealable)
+    self.assert_all_sealed(failed_indexes)
 
     log ExpiredPrematurely(block.timestamp)
+
+
+@internal
+def assert_all_sealed(_failed_indexes: DynArray[uint256, MAX_SEALABLES]):
+    """
+    @notice reverts if `_failed_indexes` is not empty and report the indexes
+            in the error message.
+    @dev    If `_failed_indexes` is not empty, the function reverts with the error message.
+            The error message is a decimal number where each digit represent the index of the
+            sealable that failed to be sealed (not paused after `seal()` was called).
+
+            Note that the indexes in the error message are given in the descending order to avoid
+            losing leading zeros when casting to string,
+
+            e.g. [0, 2, 3, 6] -> "6320"
+    @param _failed_indexes a list of sealable indexes that failed to seal 
+    """
+    indexes_as_decimal: uint256 = 0
+    loop_index: uint256 = 0
+
+    # convert failed indexes to a decimal representation
+    for failed_index in _failed_indexes:
+        indexes_as_decimal += failed_index * 10 ** loop_index
+        loop_index += 1
+
+    # generate error message with indexes as a decimal string
+    error_message: String[78] = uint2str(indexes_as_decimal)
+
+    # assert that there are no failed indexes, else revert with error message
+    assert len(_failed_indexes) == 0, error_message
 
 @internal
 @view

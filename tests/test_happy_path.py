@@ -30,7 +30,7 @@ def test_happy_path(networks, chain, project, accounts):
     SEAL_DURATION_SECONDS = 60 * 60 * 24 * 7  # one week
     SEALABLES = []
     for _ in range(8):
-        SEALABLES.append(project.SealableMock.deploy(sender=DEPLOYER))
+        SEALABLES.append(project.SealableMock.deploy(False, sender=DEPLOYER))
 
     now = chain.pending_timestamp
 
