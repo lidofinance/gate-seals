@@ -98,11 +98,19 @@ def __init__(
     SEALING_COMMITTEE = _sealing_committee
     SEAL_DURATION_SECONDS = _seal_duration_seconds
 
+    # Create a new list to store unique addresses.
+    # We iterate over `_sealables` and check if each sealable is not already in the new list.
+    # If not, we append it to the new list, ensuring that only unique addresses are stored.
+    # If a duplicate is found, we stop execution as the new list serves as a flag for duplicates.
+    # Note, we use a memory list instead of `self.sealables` to reduce the number of reads/writes to storage.
+    non_duplicates: DynArray[address, MAX_SEALABLES] = []
+
     for sealable in _sealables:
         assert sealable != empty(address), "sealables: includes zero address"
-        assert not sealable in self.sealables, "sealables: includes duplicates"
-        self.sealables.append(sealable)
+        assert sealable not in non_duplicates, "sealables: includes duplicates"
+        non_duplicates.append(sealable)
     
+    self.sealables = non_duplicates
     self.expiry_timestamp = _expiry_timestamp
 
 
