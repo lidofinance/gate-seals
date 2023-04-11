@@ -304,9 +304,12 @@ def test_seal_empty_subset(gate_seal, sealing_committee):
 
 
 def test_seal_duplicates(gate_seal, sealables, sealing_committee):
-    sealables_with_duplicates = sealables + [sealables[0]]
+    if len(sealables) == MAX_SEALABLES:
+        sealables[-1] = sealables[0]
+    else:
+        sealables.append(sealables[0])
     with reverts("sealables: includes duplicates"):
-        gate_seal.seal(sealables_with_duplicates, sender=sealing_committee)
+        gate_seal.seal(sealables, sender=sealing_committee)
 
 
 def test_seal_nonintersecting_subset(accounts, gate_seal, sealing_committee):
