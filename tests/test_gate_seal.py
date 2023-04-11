@@ -166,7 +166,7 @@ def test_sealables_cannot_include_duplicates(
     sealables,
     expiry_timestamp,
 ):
-    sealables[1] = sealables[0]
+    sealables.append(sealables[0])
 
     with reverts("sealables: includes duplicates"):
         project.GateSeal.deploy(
