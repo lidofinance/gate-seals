@@ -203,13 +203,8 @@ def has_duplicates(_sealables: DynArray[address, MAX_SEALABLES]) -> bool:
 @pure
 def to_error_string(_failed_indexes: DynArray[uint256, MAX_SEALABLES]) -> String[78]:
     """
-    @notice reverts if `_failed_indexes` is not empty and report the indexes
-            in the error message.
-    @dev    If `_failed_indexes` is not empty, the function reverts with the error message.
-            The error message is a decimal number where each digit represent the index of the
-            sealable that failed to be sealed (not paused after `seal()` was called).
-
-            Note that the indexes in the error message are given in the descending order to avoid
+    @notice converts a list of indexes into an error message to faciliate debugging
+    @dev    The indexes in the error message are given in the descending order to avoid
             losing leading zeros when casting to string,
 
             e.g. [0, 2, 3, 6] -> "6320"
