@@ -158,10 +158,16 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     for sealable in _sealables:
         assert sealable in self.sealables, "sealables: includes a non-sealable"
 
-        pausable: IPausableUntil = IPausableUntil(sealable)
-        pausable.pauseFor(SEAL_DURATION_SECONDS)
+        success: bool = False
+
+        # using `raw_call` to catch external revert and continue execution
+        success = raw_call(
+            sealable,
+            _abi_encode(SEAL_DURATION_SECONDS, method_id=method_id("pauseFor(uint256)")),
+            revert_on_failure=False
+        )
         
-        if pausable.isPaused():
+        if success and IPausableUntil(sealable).isPaused():
             log Sealed(self, SEALING_COMMITTEE, SEAL_DURATION_SECONDS, sealable, block.timestamp)
         else:
             failed_indexes.append(sealable_index)
