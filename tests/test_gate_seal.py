@@ -356,18 +356,20 @@ def test_seal_only_once(gate_seal, sealing_committee, sealables):
         gate_seal.seal(sealables, sender=sealing_committee)
 
 
-@pytest.mark.parametrize("unpausable_index", range(MAX_SEALABLES))
+@pytest.mark.parametrize("failing_index", range(MAX_SEALABLES))
 def test_single_failed_sealable_error_message(
     project,
     deployer,
     sealing_committee,
     seal_duration_seconds,
     expiry_timestamp,
-    unpausable_index,
+    failing_index,
     generate_sealables,
 ):
     sealables = generate_sealables(MAX_SEALABLES)
-    sealables[unpausable_index] = generate_sealables(1, True)[0]
+    unpausable = random.choice([True, False])
+    should_revert = not unpausable
+    sealables[failing_index] = generate_sealables(1, unpausable, should_revert)[0]
 
     gate_seal = project.GateSeal.deploy(
         sealing_committee,
@@ -377,7 +379,7 @@ def test_single_failed_sealable_error_message(
         sender=deployer,
     )
 
-    with reverts(f"{unpausable_index}"):
+    with reverts(f"{failing_index}"):
         gate_seal.seal(
             sealables,
             sender=sealing_committee,

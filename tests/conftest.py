@@ -114,6 +114,7 @@ def day():
 
 @pytest.fixture(scope="session")
 def generate_sealables(project, deployer):
-    return lambda n, unpausable=False: [
-        project.SealableMock.deploy(unpausable, sender=deployer) for _ in range(n)
+    return lambda n, unpausable=False, reverts=False: [
+        project.SealableMock.deploy(unpausable, reverts, sender=deployer)
+        for _ in range(n)
     ]
