@@ -227,19 +227,31 @@ def test_deploy_params_must_match(
     assert gate_seal.is_expired() == False, "should not be expired"
 
 
-def test_seal_all(chain, project, gate_seal, sealing_committee, sealables):
+def test_seal_all(
+    networks,
+    chain,
+    project,
+    gate_seal,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+):
     expected_timestamp = chain.pending_timestamp
     tx = gate_seal.seal(sealables, sender=sealing_committee)
-    expired_event = next(
-        (event for event in tx.events if event.event_name == "ExpiredPrematurely"), None
-    )
-    assert expired_event, "ExpiredPrematurely event present"
+
+    for i, event in enumerate(tx.events):
+        assert event.event_name == "Sealed"
+        assert event.gate_seal == gate_seal.address
+        assert event.sealed_by == sealing_committee
+        assert event.sealed_for == seal_duration_seconds
+        assert event.sealable == sealables[i]
+        assert event.sealed_at == expected_timestamp
+
     assert (
-        expired_event.expired_timestamp == expected_timestamp
+        gate_seal.get_expiry_timestamp() == expected_timestamp
     ), "expiry timestamp matches"
 
-    assert gate_seal.get_expiry_timestamp() == 0, "expiry timestamp is not 0"
-
+    networks.active_provider.mine()
     assert (
         gate_seal.is_expired() == True
     ), "gate seal must be expired immediately after sealing"
@@ -248,17 +260,36 @@ def test_seal_all(chain, project, gate_seal, sealing_committee, sealables):
         assert project.SealableMock.at(sealable).isPaused(), "sealable must be sealed"
 
 
-def test_seal_partial(project, gate_seal, sealing_committee, sealables):
-    sealable_to_seal = sealables[0]
+def test_seal_partial(
+    networks,
+    chain,
+    project,
+    gate_seal,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+):
+    expected_timestamp = chain.pending_timestamp
+    sealables_to_seal = [sealables[0]]
 
-    gate_seal.seal([sealable_to_seal], sender=sealing_committee)
+    tx = gate_seal.seal(sealables_to_seal, sender=sealing_committee)
+
+    for i, event in enumerate(tx.events):
+        assert event.event_name == "Sealed"
+        assert event.gate_seal == gate_seal.address
+        assert event.sealed_by == sealing_committee
+        assert event.sealed_for == seal_duration_seconds
+        assert event.sealable == sealables_to_seal[i]
+        assert event.sealed_at == expected_timestamp
+
+    networks.active_provider.mine()
     assert (
         gate_seal.is_expired() == True
     ), "gate seal must be expired immediately after sealing"
 
     for sealable in sealables:
         sealable_contract = project.SealableMock.at(sealable)
-        if sealable == sealable_to_seal:
+        if sealable in sealables_to_seal:
             assert sealable_contract.isPaused(), "sealable must be sealed"
         else:
             assert not sealable_contract.isPaused(), "sealable must not be sealed"

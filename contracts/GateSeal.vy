@@ -29,11 +29,7 @@ event Sealed:
     sealed_by: address
     sealed_for: uint256
     sealable: address
-
-
-event ExpiredPrematurely:
-    expired_timestamp: uint256
-
+    sealed_at: uint256
 
 interface IPausableUntil:
     def pauseFor(_duration: uint256): nonpayable
@@ -176,15 +172,13 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
         pausable.pauseFor(SEAL_DURATION_SECONDS)
         
         if pausable.isPaused():
-            log Sealed(self, SEALING_COMMITTEE, SEAL_DURATION_SECONDS, sealable)
+            log Sealed(self, SEALING_COMMITTEE, SEAL_DURATION_SECONDS, sealable, block.timestamp)
         else:
             failed_indexes.append(sealable_index)
     
         sealable_index += 1
 
     self.assert_all_sealed(failed_indexes)
-
-    log ExpiredPrematurely(block.timestamp)
 
 
 @internal
@@ -224,4 +218,4 @@ def _is_expired() -> bool:
 
 @internal
 def _expire_immediately():
-    self.expiry_timestamp = 0
+    self.expiry_timestamp = block.timestamp
