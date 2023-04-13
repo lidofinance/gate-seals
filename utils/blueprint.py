@@ -1,5 +1,6 @@
 from ape import project
 from ape.logging import logger
+import sys
 
 # GateSeals are deployed using Vyper's `create_from_blueprint`
 # GateSeal blueprint is EIP5202-compliant bytecode
@@ -58,7 +59,7 @@ def verify_eip522_blueprint(bytecode):
     assert n_length_bytes != 0b11, "reserved bits are set, not an EIP5202 preamble"
 
 
-def deploy_blueprint(deployer, deploy_code):
+def deploy_blueprint(deployer, deploy_code, prompt=False):
     transaction = project.provider.network.ecosystem.create_transaction(
         chain_id=project.provider.chain_id,
         data=deploy_code,
@@ -68,5 +69,13 @@ def deploy_blueprint(deployer, deploy_code):
 
     transaction.gas_limit = project.provider.estimate_gas_cost(transaction)
     signed_transaction = deployer.sign_transaction(transaction)
+    if prompt:
+        logger.info("Blueprint deploy transaction:")
+        logger.info(signed_transaction)
+        logger.info("Proceed? (yes/no)")
+        proceed = input("> ")
+        if proceed.lower() not in ["y", "yes"]:
+            logger.error("Script stopped.")
+            sys.exit()
     receipt = project.provider.send_transaction(signed_transaction)
     return receipt.contract_address
