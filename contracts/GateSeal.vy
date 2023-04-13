@@ -159,11 +159,15 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
         assert sealable in self.sealables, "sealables: includes a non-sealable"
 
         success: bool = False
+        response: Bytes[32] = b""
 
         # using `raw_call` to catch external revert and continue execution
-        success = raw_call(
+        # capturing `response` to keep the compiler from what acting out,
+        # for details, see https://docs.vyperlang.org/en/stable/built-in-functions.html#raw_call
+        success, response = raw_call(
             sealable,
             _abi_encode(SEAL_DURATION_SECONDS, method_id=method_id("pauseFor(uint256)")),
+            max_outsize=32,
             revert_on_failure=False
         )
         
