@@ -12,6 +12,7 @@ from utils.blueprint import (
 )
 from utils.config import get_deployer, is_live_network
 from utils.env import load_env_variable
+from utils.helpers import construct_deployed_filename
 
 
 def main():
@@ -62,22 +63,19 @@ def main():
 
     assert factory.get_blueprint() == blueprint_address
 
-    if is_live_network():
-        deployed_filename = (
-            f"deployed/{networks.active_provider.network.name}/{factory.address}.json"
-        )
-        os.makedirs(os.path.dirname(deployed_filename), exist_ok=True)
+    deployed_filename = construct_deployed_filename(factory.address, "factory")
+    os.makedirs(os.path.dirname(deployed_filename), exist_ok=True)
 
-        with open(deployed_filename, "w") as deployed_file:
-            deployed_file.write(
-                json.dumps(
-                    {
-                        "factory": factory.address,
-                        "blueprint": blueprint_address,
-                        "tx_hash": factory.receipt.txn_hash,
-                        "deployer": deployer.address,
-                    }
-                )
+    with open(deployed_filename, "w") as deployed_file:
+        deployed_file.write(
+            json.dumps(
+                {
+                    "factory": factory.address,
+                    "blueprint": blueprint_address,
+                    "tx_hash": factory.receipt.txn_hash,
+                    "deployer": deployer.address,
+                }
             )
+        )
 
-        logger.success(f"Deployed file: {deployed_filename}")
+    logger.success(f"Deployed file: {deployed_filename}")
