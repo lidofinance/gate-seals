@@ -432,13 +432,13 @@ def test_cannot_seal_twice_in_one_tx(gate_seal, sealables, sealing_committee):
 
 def test_raw_call_success_should_be_false_when_sealable_reverts_on_pause(project, deployer, generate_sealables, sealing_committee, seal_duration_seconds, expiry_timestamp):
     """
-        `raw_call` without `max_outsize` and with `revert_on_failure=True` for some reason returns the boolean value of storage[0] :^)
+        `raw_call` without `max_outsize` and with `revert_on_failure=True` for some reason returns the boolean value of memory[0] :^)
 
         Which is why we specify `max_outsize=32`, even though don't actually use it.
 
-        To test that `success` returns actual value instead of returning bool of storage[0],
+        To test that `success` returns actual value instead of returning bool of memory[0],
         we need to pause the contract before the sealing,
-        so that the condition `success and is_paused()` is false (i.e `False and True`), see GateSeal.vy, line 174.
+        so that the condition `success and is_paused()` is false (i.e `False and True`), see GateSeal.vy::seal()
 
         For that, we use `__force_pause_for` on SealableMock to ignore any checks and forcefully pause the contract.
         After calling this function, the SealableMock is paused but the call to `pauseFor` will still revert,
