@@ -428,3 +428,46 @@ def test_cannot_seal_twice_in_one_tx(gate_seal, sealables, sealing_committee):
     gate_seal.seal(sealables, sender=sealing_committee)
     with reverts("gate seal: expired"):
         gate_seal.seal(sealables, sender=sealing_committee)
+
+
+def test_raw_call_response_should_be_false_when_sealable_reverts_on_pause(project, deployer, generate_sealables, sealing_committee, seal_duration_seconds, expiry_timestamp):
+    """
+        `raw_call` without `max_outsize` and with `revert_on_failure=True` for some reason returns the boolean value of storage[0] :^)
+
+        Which is why we specify `max_outsize=32`, even though don't actually use it.
+
+        To test that `success` returns actual value instead of returning bool of storage[0],
+        we need to pause the contract before the sealing,
+        so that the condition `success and is_paused()` is false (i.e `False and True`), see GateSeal.vy, line 174.
+
+        For that, we use `__force_pause_for` on SealableMock to ignore any checks and forcefully pause the contract.
+        After calling this function, the SealableMock is paused but the call to `pauseFor` will still revert,
+        thus the returned `success` should be False, the condition fails and the call reverts altogether.
+
+        Without `max_outsize=32`, the transaction would not revert.
+    """
+
+    unpausable = False
+    should_revert = True
+    # we'll use only 1 sealable
+    sealables = generate_sealables(1, unpausable, should_revert)
+
+    # deploy GateSeal 
+    gate_seal = project.GateSeal.deploy(
+        sealing_committee,
+        seal_duration_seconds,
+        sealables,
+        expiry_timestamp,
+        sender=deployer,
+    )
+
+    # making sure we have the right contract
+    assert gate_seal.get_sealables() == sealables
+
+    # forcefully pause the sealable before sealing
+    sealables[0].__force_pause_for(seal_duration_seconds, sender=deployer)
+    assert sealables[0].isPaused(), "should be paused now"
+
+    # seal() should revert because `raw_call` to sealable returns `success=False`, even though isPaused() is True.
+    with reverts("0"):
+        gate_seal.seal(sealables, sender=sealing_committee)

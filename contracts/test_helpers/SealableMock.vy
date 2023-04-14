@@ -17,6 +17,13 @@ def isPaused() -> bool:
 
 
 @external
+def __force_pause_for(_duration: uint256):
+    # pause ignoring any checks
+    # required to simulate cases where Sealable is already paused but the seal() reverts
+    self.resumed_timestamp = block.timestamp + _duration
+
+
+@external
 def pauseFor(_duration: uint256):
     assert not self.reverts, "simulating revert"
     if not self.unpausable and not self._is_paused():
