@@ -430,7 +430,7 @@ def test_cannot_seal_twice_in_one_tx(gate_seal, sealables, sealing_committee):
         gate_seal.seal(sealables, sender=sealing_committee)
 
 
-def test_raw_call_response_should_be_false_when_sealable_reverts_on_pause(project, deployer, generate_sealables, sealing_committee, seal_duration_seconds, expiry_timestamp):
+def test_raw_call_success_should_be_false_when_sealable_reverts_on_pause(project, deployer, generate_sealables, sealing_committee, seal_duration_seconds, expiry_timestamp):
     """
         `raw_call` without `max_outsize` and with `revert_on_failure=True` for some reason returns the boolean value of storage[0] :^)
 
