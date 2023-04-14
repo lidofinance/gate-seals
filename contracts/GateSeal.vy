@@ -162,7 +162,8 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
         response: Bytes[32] = b""
 
         # using `raw_call` to catch external revert and continue execution
-        # capturing `response` to keep the compiler from acting out,
+        # capturing `response` to keep the compiler from acting out but will not be checking it
+        # as different sealables may return different values if anything at all
         # for details, see https://docs.vyperlang.org/en/stable/built-in-functions.html#raw_call
         success, response = raw_call(
             sealable,
