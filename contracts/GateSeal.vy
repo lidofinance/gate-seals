@@ -96,7 +96,7 @@ def __init__(
     assert _expiry_timestamp <= block.timestamp + MAX_EXPIRY_PERIOD_SECONDS, "expiry timestamp: exceeds max expiry period"
     for sealable in _sealables:
         assert sealable != empty(address), "sealables: includes zero address"
-    assert not self.has_duplicates(_sealables), "sealables: includes duplicates"
+    assert not self._has_duplicates(_sealables), "sealables: includes duplicates"
 
     SEALING_COMMITTEE = _sealing_committee
     SEAL_DURATION_SECONDS = _seal_duration_seconds
@@ -139,12 +139,12 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     """
     @notice Seal the contract(s).
     @dev    Immediately expires GateSeal and, thus, can only be called once.
-    @param _sealables a proper/improper subset of sealables.
+    @param _sealables a list of sealables to seal; may include all or only a subset.
     """
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
     assert len(_sealables) > 0, "sealables: empty subset"
-    assert not self.has_duplicates(_sealables), "sealables: includes duplicates"
+    assert not self._has_duplicates(_sealables), "sealables: includes duplicates"
 
     self._expire_immediately()
 
@@ -179,7 +179,7 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     
         sealable_index += 1
 
-    assert len(failed_indexes) == 0, self.to_error_string(failed_indexes)
+    assert len(failed_indexes) == 0, self._to_error_string(failed_indexes)
 
 
 @internal
@@ -195,7 +195,7 @@ def _expire_immediately():
 
 @internal
 @pure
-def has_duplicates(_sealables: DynArray[address, MAX_SEALABLES]) -> bool:
+def _has_duplicates(_sealables: DynArray[address, MAX_SEALABLES]) -> bool:
     """
     @notice checks the list for duplicates 
     @param  _sealables list of addresses to check
@@ -212,7 +212,7 @@ def has_duplicates(_sealables: DynArray[address, MAX_SEALABLES]) -> bool:
 
 @internal
 @pure
-def to_error_string(_failed_indexes: DynArray[uint256, MAX_SEALABLES]) -> String[78]:
+def _to_error_string(_failed_indexes: DynArray[uint256, MAX_SEALABLES]) -> String[78]:
     """
     @notice converts a list of indexes into an error message to faciliate debugging
     @dev    The indexes in the error message are given in the descending order to avoid
@@ -233,5 +233,4 @@ def to_error_string(_failed_indexes: DynArray[uint256, MAX_SEALABLES]) -> String
     # return type of `uint2str` is String[78] because 2^256 has 78 digits
     error_message: String[78] = uint2str(indexes_as_decimal)
 
-    # assert that there are no failed indexes, else revert with error message
     return error_message
