@@ -139,7 +139,7 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
     """
     @notice Seal the contract(s).
     @dev    Immediately expires GateSeal and, thus, can only be called once.
-    @param _sealables a proper/improper subset of sealables.
+    @param _sealables a list of sealables to seal; may include all or only a subset.
     """
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
