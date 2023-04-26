@@ -1,0 +1,13 @@
+{
+    "gate_seal": "0xEE656d0C8e9f0646B505a13295C188164a3D8EaC",
+    "tx_hash": "0x9d3ca28e562f2f3f9e615a78b2f4d979be7b94646ca75559770586f435ed33bf",
+    "params": {
+        "sealing_committee": "0xa5F1d7D49F581136Cf6e58B32cBE9a2039C48bA1",
+        "seal_duration_seconds": 518400,
+        "sealables": [
+            "0xCF117961421cA9e546cD7f50bC73abCdB3039533",
+            "0xb75A55EFab5A8f5224Ae93B34B25741EDd3da98b"
+        ],
+        "expiry_timestamp": 1714038347
+    }
+}
