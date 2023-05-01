@@ -5,7 +5,7 @@ description = ""
 authors = ["Azat Serikov <azatsdev@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "3.10"
+python = "^3.10.4"
 eth-ape = "^0.6.2"
 vyper = "0.3.7"
 eth-utils = "^2.1.0"
