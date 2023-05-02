@@ -34,7 +34,7 @@ def main():
     gate_seal_address = transaction.events[0].gate_seal
     logger.success(f"GateSeal deployed to {gate_seal_address}")
 
-    deployed_filename = construct_deployed_filename(factory.address, "gateseal")
+    deployed_filename = construct_deployed_filename(gate_seal_address, "gateseal")
     os.makedirs(os.path.dirname(deployed_filename), exist_ok=True)
 
     with open(deployed_filename, "w") as deployed_file:
