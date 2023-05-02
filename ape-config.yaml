@@ -2,8 +2,8 @@ name: gate-seal
 plugins:
   - name: vyper
     version: 0.6.1
-  - name: hardhat
-    version: 0.6.0
+  - name: infura
+    version: 0.6.1
 
 ethereum:
   default_network: local
@@ -17,10 +17,3 @@ hardhat:
         upstream_provider: infura
       goerli:
         upstream_provider: infura
-
-geth:
-  ethereum:
-    mainnet:
-      uri: ${MAINNET_RPC_ENDPOINT}
-    goerli:
-      uri: ${GOERLI_RPC_ENDPOINT}

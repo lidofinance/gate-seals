@@ -11,7 +11,7 @@ from utils.helpers import construct_deployed_filename
 def main():
     factory_address = load_env_variable("FACTORY")
 
-    deployed_filename = construct_deployed_filename(factory_address, "factory")
+    deployed_filename = construct_deployed_filename(factory_address, "factory", check=True)
 
     with open(deployed_filename, "r") as deployed_file:
         deployed_data = json.load(deployed_file)
