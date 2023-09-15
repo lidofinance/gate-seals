@@ -69,7 +69,12 @@ poetry install
 yarn
 ```
 
-4. (optional) set `MAINNET_RPC_ENDPOINT` environment variable for mainnet forking
+4. Install ape plugins
+```shell
+ape plugins install .
+```
+
+5. (optional) set `MAINNET_RPC_ENDPOINT` environment variable for mainnet forking
 ```shell
 export MAINNET_RPC_ENDPOINT=<your-mainnet-rpc-endpoint>
 ```
