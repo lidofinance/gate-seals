@@ -74,7 +74,7 @@ yarn
 ape plugins install .
 ```
 
-5. (optional) set `MAINNET_RPC_ENDPOINT` environment variable for mainnet forking
+5. (optional) set `MAINNET_RPC_ENDPOINT` environment variable for mainnet forking and deploying
 ```shell
 export MAINNET_RPC_ENDPOINT=<your-mainnet-rpc-endpoint>
 ```
