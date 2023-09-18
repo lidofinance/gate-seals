@@ -76,7 +76,7 @@ flowchart LR
         poetryConfig --> ape-hardhat
     end  
 
-    GateSeal{"GateSeal\nDependencies"}
+    GateSeal{"GateSeals\nDependencies"}
 
     GateSeal --> poetry
     GateSeal --> ape
