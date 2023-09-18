@@ -48,7 +48,7 @@ flowchart LR
     subgraph ape["ape"]
         direction LR
 
-        apeConfig["`_ape-config.yaml_`"]
+        apeConfig["ape-config.yaml"]
         vyper["vyper"]
         infura["infura"]
         
@@ -59,7 +59,7 @@ flowchart LR
     subgraph yarn["yarn"]
         direction LR
         
-        yarnConfig["`_package.json_`"]
+        yarnConfig["package.json"]
         hardhat["hardhat"]
         
         yarnConfig --> hardhat
@@ -68,7 +68,7 @@ flowchart LR
     subgraph poetry["poetry"]
         direction LR
 
-        poetryConfig["`_pyproject.toml_`"]
+        poetryConfig["pyproject.toml"]
         eth-ape["eth-ape"]
         ape-hardhat["ape-hardhat"]
 
