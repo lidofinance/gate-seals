@@ -41,6 +41,48 @@ While Vyper offers other ways to create new contracts, we opted to use the bluep
 
 The blueprint follows the [EIP-5202](https://eips.ethereum.org/EIPS/eip-5202) format, which includes a header that makes the contract uncallable and specifies the version. 
 
+## Dependencies
+
+```mermaid
+flowchart LR
+    subgraph ape["ape"]
+        direction LR
+
+        apeConfig["ape-config.yaml"]
+        vyper["vyper"]
+        infura["infura"]
+        
+        apeConfig --> vyper
+        apeConfig --> infura
+    end
+
+    subgraph yarn["yarn"]
+        direction LR
+        
+        yarnConfig["package.json"]
+        hardhat["hardhat"]
+        
+        yarnConfig --> hardhat
+    end
+
+    subgraph poetry["poetry"]
+        direction LR
+
+        poetryConfig["pyproject.toml"]
+        eth-ape["eth-ape"]
+        ape-hardhat["ape-hardhat"]
+
+        poetryConfig --> eth-ape
+        poetryConfig --> ape-hardhat
+    end  
+
+    GateSeal{"GateSeals\nDependencies"}
+
+    GateSeal --> poetry
+    GateSeal --> ape
+    GateSeal --> yarn
+```
+
 ## Contributing
 
 ### Prerequisites
