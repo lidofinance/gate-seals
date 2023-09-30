@@ -39,14 +39,14 @@ def main():
         DEPLOY FACTORY
     """
     max_priority_fee = "50 gwei"
-    etherscan_token = load_env_variable("ETHERSCAN_TOKEN", required=is_live)
-    publish = bool(etherscan_token)
+    # etherscan_token = load_env_variable("ETHERSCAN_TOKEN", required=is_live)
+    # publish = bool(etherscan_token)
 
     logger.info("Factory deploy transaction")
     logger.info(f"Blueprint: {blueprint_address}")
     logger.info(f"Deployer: {deployer}")
     logger.info(f"Max priority fee: {max_priority_fee}")
-    logger.info(f"Publish: {publish}")
+    # logger.info(f"Publish: {publish}")
 
     logger.info("Proceed?")
     proceed = input("> ")
@@ -58,7 +58,7 @@ def main():
         blueprint_address,
         sender=deployer,
         max_priority_fee=max_priority_fee,
-        publish=publish,
+        publish=False,
     )
 
     assert factory.get_blueprint() == blueprint_address
