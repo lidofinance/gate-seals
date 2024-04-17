@@ -12,6 +12,10 @@ from utils.constants import (
 )
 
 
+def test_get_min_seal_duration_seconds(gate_seal):
+    assert gate_seal.get_min_seal_duration_seconds() == MIN_SEAL_DURATION_SECONDS
+
+
 def test_committee_cannot_be_zero_address(
     project, deployer, seal_duration_seconds, sealables, expiry_timestamp
 ):
@@ -71,27 +75,10 @@ def test_seal_duration_max(
 
     assert (
         gate_seal.get_seal_duration_seconds() == MAX_SEAL_DURATION_SECONDS
-    ), "seal duration can be up to 14 days"
+    ), "seal duration can be up to uint256 max"
 
 
-def test_seal_duration_exceeds_max(
-    project,
-    deployer,
-    sealing_committee,
-    sealables,
-    expiry_timestamp,
-):
-    with reverts("seal duration: exceeds max"):
-        project.GateSeal.deploy(
-            sealing_committee,
-            MAX_SEAL_DURATION_SECONDS + 1,
-            sealables,
-            expiry_timestamp,
-            sender=deployer,
-        )
-
-
-def test_sealables_exceeds_max(
+def test_sealables_empty_list(
     project,
     deployer,
     sealing_committee,
@@ -325,6 +312,16 @@ def test_seal_partially_intersecting_subset(
 ):
     with reverts("sealables: includes a non-sealable"):
         gate_seal.seal([sealables[0], accounts[0]], sender=sealing_committee)
+
+
+def test_seal_get_sealed_sealables(gate_seal, sealables, sealing_committee):
+    sealed_sealables_before = gate_seal.get_sealed_sealables()
+    assert sealed_sealables_before == [], "no sealables should be sealed yet"
+
+    gate_seal.seal(sealables, sender=sealing_committee)
+
+    sealed_sealables_after = gate_seal.get_sealed_sealables()
+    assert sealed_sealables_after == sealables, "all sealables should be sealed"
 
 
 def test_natural_expiry(
