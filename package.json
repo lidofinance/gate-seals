@@ -5,6 +5,6 @@
   "author": "Azat Serikov <azatsdev@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "hardhat": "^2.12.6"
+    "hardhat": "2.12.6"
   }
 }

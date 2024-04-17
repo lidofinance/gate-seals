@@ -42,12 +42,10 @@ SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 MIN_SEAL_DURATION_DAYS: constant(uint256) = 4
 MIN_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_SEAL_DURATION_DAYS
 
-# The maximum allowed seal duration is 14 days.
-# Anything higher than that may be too long of a disruption for the protocol.
-# Keep in mind, that the DAO still retains the ability to resume the contracts
-# (or, in the GateSeal terms, "break the seal") prematurely.
-MAX_SEAL_DURATION_DAYS: constant(uint256) = 14
-MAX_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_SEAL_DURATION_DAYS
+# The maximum allowed seal duration is infinite.
+# Due to GateSealBreaker mechanism we expect sealed contracts to be unpaused
+# externally by DualGovernance if sealed.
+MAX_SEAL_DURATION_SECONDS: constant(uint256) = max_value(uint256)
 
 # The maximum number of sealables is 8.
 # GateSeals were originally designed to pause WithdrawalQueue and ValidatorExitBus,
@@ -74,6 +72,10 @@ SEAL_DURATION_SECONDS: immutable(uint256)
 # Sealing can be partial, meaning the committee may decide to pause only a subset of this list,
 # though GateSeal will still expire immediately.
 sealables: DynArray[address, MAX_SEALABLES]
+
+# The addresses of paused contracts. This allows to understand how many of sealables
+# have been sealed via GateSeals. 
+sealed_sealables: DynArray[address, MAX_SEALABLES]
 
 # A unix epoch timestamp starting from which GateSeal is completely unusable
 # and a new GateSeal will have to be set up. This timestamp will be changed
@@ -118,8 +120,20 @@ def get_seal_duration_seconds() -> uint256:
 
 @external
 @view
+def get_min_seal_duration_seconds() -> uint256:
+    return MIN_SEAL_DURATION_SECONDS
+
+
+@external
+@view
 def get_sealables() -> DynArray[address, MAX_SEALABLES]:
     return self.sealables
+
+
+@external
+@view
+def get_sealed_sealables() -> DynArray[address, MAX_SEALABLES]:
+    return self.sealed_sealables
 
 
 @external
@@ -178,6 +192,8 @@ def seal(_sealables: DynArray[address, MAX_SEALABLES]):
             failed_indexes.append(sealable_index)
     
         sealable_index += 1
+
+    self.sealed_sealables = _sealables
 
     assert len(failed_indexes) == 0, self._to_error_string(failed_indexes)
 

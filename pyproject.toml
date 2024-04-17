@@ -6,10 +6,10 @@ authors = ["Azat Serikov <azatsdev@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.10.4,<3.11"
-eth-ape = "^0.6.2"
+eth-ape = "0.6.27"
 vyper = "0.3.7"
 eth-utils = "^2.1.0"
-ape-hardhat = "^0.6.4"
+ape-hardhat = "0.6.4"
 
 [tool.poetry.dev-dependencies]
 
