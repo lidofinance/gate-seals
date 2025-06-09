@@ -37,9 +37,19 @@ event Sealed:
 
 SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 
-# The maximum GateSeal expiry duration is 3 years.
-MAX_EXPIRY_PERIOD_DAYS: constant(uint256) = 365 * 3
-MAX_EXPIRY_PERIOD_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_EXPIRY_PERIOD_DAYS
+# The lifetime of GateSeal must be between 1 month and 1 year.
+MIN_LIFETIME_DURATION_DAYS: constant(uint256) = 30
+MIN_LIFETIME_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_LIFETIME_DURATION_DAYS
+
+MAX_LIFETIME_DURATION_DAYS: constant(uint256) = 365
+MAX_LIFETIME_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_LIFETIME_DURATION_DAYS
+
+# Prolongation window during which the committee may extend the lifetime.
+MIN_PROLONGATION_WINDOW_DAYS: constant(uint256) = 7
+MIN_PROLONGATION_WINDOW_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_PROLONGATION_WINDOW_DAYS
+
+MAX_PROLONGATION_WINDOW_DAYS: constant(uint256) = 30
+MAX_PROLONGATION_WINDOW_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_PROLONGATION_WINDOW_DAYS
 
 # The minimum allowed seal duration is 6 days. This is because it takes at least
 # 5 days to pass and enact (3 days main phase, 2 days objection phase).
@@ -63,10 +73,6 @@ MAX_SEALABLES: constant(uint256) = 8
 # Maximum number of prolongations allowed
 MAX_PROLONGATIONS: constant(uint256) = 5
 
-# Maximum duration of a single prolongation is 6 months
-MAX_PROLONGATION_DURATION_DAYS: constant(uint256) = 180
-MAX_PROLONGATION_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_PROLONGATION_DURATION_DAYS
-
 # To simplify the code, we chose not to implement committees in GateSeals.
 # Instead, GateSeals are operated by a single account which must be a multisig.
 # The code does not perform any such checks but we pinky-promise that
@@ -79,8 +85,11 @@ SEAL_DURATION_SECONDS: immutable(uint256)
 
 # The sealing committee extends the GateSeal to attest that the multisig is still active.
 
-# The duration of the prolongation in seconds.
-PROLONGATION_DURATION_SECONDS: immutable(uint256)
+# The time window before expiry during which prolongation is allowed.
+PROLONGATION_WINDOW_SECONDS: immutable(uint256)
+
+# Initial lifetime duration in seconds.
+LIFETIME_DURATION_SECONDS: immutable(uint256)
 
 # The addresses of pausable contracts. The gate seal must have the permission to
 # pause these contracts at the time of the sealing.
@@ -101,23 +110,22 @@ def __init__(
     _sealing_committee: address,
     _seal_duration_seconds: uint256,
     _sealables: DynArray[address, MAX_SEALABLES],
-    _expiry_timestamp: uint256,
-    _prolongations: uint256,
-    _prolongation_duration_seconds: uint256
+    _lifetime_duration_seconds: uint256,
+    _max_prolongations: uint256,
+    _prolongation_window_seconds: uint256
 ):
     assert _sealing_committee != empty(address), "sealing committee: zero address"
     assert _seal_duration_seconds >= MIN_SEAL_DURATION_SECONDS, "seal duration: too short"
     assert _seal_duration_seconds <= MAX_SEAL_DURATION_SECONDS, "seal duration: exceeds max"
     assert len(_sealables) > 0, "sealables: empty list"
-    assert _expiry_timestamp > block.timestamp, "expiry timestamp: must be in the future"
-    assert _expiry_timestamp <= block.timestamp + MAX_EXPIRY_PERIOD_SECONDS, "expiry timestamp: exceeds max expiry period"
-    assert _prolongations <= MAX_PROLONGATIONS, "prolongations: exceeds max"
-    assert _prolongations >= 0, "prolongations: must be non-negative"
-    if (_prolongations == 0):
-        assert _prolongation_duration_seconds == 0, "prolongation duration: must be zero"
-    else:
-        assert _prolongation_duration_seconds > 0, "prolongation duration: must be positive"
-        assert _prolongation_duration_seconds <= MAX_PROLONGATION_DURATION_SECONDS, "prolongation duration: exceeds max"
+    assert _lifetime_duration_seconds >= MIN_LIFETIME_DURATION_SECONDS, "lifetime duration: too short"
+    assert _lifetime_duration_seconds <= MAX_LIFETIME_DURATION_SECONDS, "lifetime duration: exceeds max"
+    assert _max_prolongations <= MAX_PROLONGATIONS, "max prolongations: exceeds max"
+    assert _max_prolongations >= 0, "max prolongations: must be non-negative"
+
+    assert _prolongation_window_seconds >= MIN_PROLONGATION_WINDOW_SECONDS, "prolongation window: too short"
+    assert _prolongation_window_seconds <= MAX_PROLONGATION_WINDOW_SECONDS, "prolongation window: exceeds max"
+    assert _prolongation_window_seconds <= _lifetime_duration_seconds, "prolongation window: exceeds lifetime"
 
     for sealable: address in _sealables:
         assert sealable != empty(address), "sealables: includes zero address"
@@ -125,10 +133,11 @@ def __init__(
 
     SEALING_COMMITTEE = _sealing_committee
     SEAL_DURATION_SECONDS = _seal_duration_seconds
-    PROLONGATION_DURATION_SECONDS = _prolongation_duration_seconds
+    PROLONGATION_WINDOW_SECONDS = _prolongation_window_seconds
+    LIFETIME_DURATION_SECONDS = _lifetime_duration_seconds
     self.sealables = _sealables
-    self.expiry_timestamp = _expiry_timestamp
-    self.prolongations_remaining = _prolongations
+    self.expiry_timestamp = block.timestamp + _lifetime_duration_seconds
+    self.prolongations_remaining = _max_prolongations
 
 
 @external
@@ -151,14 +160,20 @@ def get_sealables() -> DynArray[address, MAX_SEALABLES]:
 
 @external
 @view
-def get_expiry_timestamp() -> uint256:
-    return self.expiry_timestamp
+def get_lifetime_duration_seconds() -> uint256:
+    return LIFETIME_DURATION_SECONDS
 
 
 @external
 @view
-def get_prolongation_duration_seconds() -> uint256:
-    return PROLONGATION_DURATION_SECONDS
+def get_prolongation_window_seconds() -> uint256:
+    return PROLONGATION_WINDOW_SECONDS
+
+@external
+@view
+def get_expiry_timestamp() -> uint256:
+    return self.expiry_timestamp
+
 
 
 @external
@@ -174,7 +189,7 @@ def is_expired() -> bool:
 
 
 @external
-def prolong():
+def prolongLifetime():
     """
     @notice Prolong the GateSeal.
     @dev    Can be called only by the sealing committee while the seal hasn't been used and not expired.
@@ -182,8 +197,9 @@ def prolong():
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
     assert self.prolongations_remaining > 0, "prolongations: exhausted"
+    assert block.timestamp >= self.expiry_timestamp - PROLONGATION_WINDOW_SECONDS, "prolongation window: too early"
 
-    self.expiry_timestamp += PROLONGATION_DURATION_SECONDS
+    self.expiry_timestamp += LIFETIME_DURATION_SECONDS
     self.prolongations_remaining -= 1
 
 

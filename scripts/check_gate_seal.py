@@ -31,8 +31,10 @@ def main():
     assert gate_seal.get_sealables() == deployed_data["params"]["sealables"]
     logger.success("sealables matches!")
 
-    assert gate_seal.get_expiry_timestamp() == deployed_data["params"]["expiry_timestamp"]
-    logger.success("expiry_timestamp matches!")
+    assert gate_seal.get_lifetime_duration_seconds() == deployed_data["params"]["lifetime_duration_seconds"]
+    logger.success("lifetime_duration_seconds matches!")
+    assert gate_seal.get_prolongation_window_seconds() == deployed_data["params"]["prolongation_window_seconds"]
+    logger.success("prolongation_window_seconds matches!")
 
     # simulating GateSeal flow
 
@@ -40,19 +42,19 @@ def main():
     with accounts.use_sender(gate_seal.get_sealing_committee()):
         sealables = gate_seal.get_sealables()
 
-        expiry_timestamp = chain.pending_timestamp
+        expiry = chain.pending_timestamp
         gate_seal.seal(sealables)
         logger.success("Sealed")
 
         assert gate_seal.is_expired()
-        assert gate_seal.get_expiry_timestamp() == expiry_timestamp
+        assert gate_seal.get_expiry_timestamp() == expiry
 
         logger.success(f"Expired")
         for sealable in sealables:
             assert project.SealableMock.at(sealable).isPaused()
 
         logger.success("Sealables paused")
-        networks.active_provider.set_timestamp(expiry_timestamp + gate_seal.get_seal_duration_seconds())
+        networks.active_provider.set_timestamp(expiry + gate_seal.get_seal_duration_seconds())
         chain.mine()
 
         for sealable in sealables:

@@ -3,7 +3,10 @@ import json
 from ape import project, accounts, chain, networks
 from ape.logging import logger
 from eth_utils.address import to_checksum_address
-from utils.constants import MAX_EXPIRY_PERIOD_SECONDS
+from utils.constants import (
+    MAX_LIFETIME_DURATION_SECONDS,
+    MIN_PROLONGATION_WINDOW_SECONDS,
+)
 from utils.env import load_env_variable
 from utils.helpers import construct_deployed_filename
 
@@ -32,14 +35,17 @@ def main():
     sealing_committee = deployer
     seal_duration_seconds = 60 * 60 * 24 * 7  # week
     sealables = [sealable.address]
-    expiry_timestamp = chain.pending_timestamp + MAX_EXPIRY_PERIOD_SECONDS
+    lifetime_duration_seconds = MAX_LIFETIME_DURATION_SECONDS
+    expiry_timestamp = chain.pending_timestamp + lifetime_duration_seconds
 
     logger.info("Creating GateSeal...")
     tx = factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        expiry_timestamp,
+        lifetime_duration_seconds,
+        0,
+        MIN_PROLONGATION_WINDOW_SECONDS,
         sender=deployer,
     )
     logger.info("GateSeal deployed!")

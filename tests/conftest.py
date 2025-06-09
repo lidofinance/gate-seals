@@ -2,7 +2,15 @@ import pytest
 from random import randint
 from ape.logging import logger
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
-from utils.constants import MAX_EXPIRY_PERIOD_SECONDS, MAX_SEALABLES, MIN_SEALABLES
+from utils.constants import (
+    MAX_LIFETIME_DURATION_SECONDS,
+    MIN_LIFETIME_DURATION_SECONDS,
+    MAX_PROLONGATION_WINDOW_SECONDS,
+    MIN_PROLONGATION_WINDOW_SECONDS,
+    MAX_PROLONGATIONS,
+    MAX_SEALABLES,
+    MIN_SEALABLES,
+)
 
 """
 
@@ -53,17 +61,17 @@ def gate_seal(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    expiry_timestamp,
-    prolongations,
-    prolongation_duration_seconds,
+    lifetime_duration_seconds,
+    max_prolongations,
+    prolongation_window_seconds,
 ):
     transaction = gate_seal_factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        expiry_timestamp(),
-        prolongations,
-        prolongation_duration_seconds,
+        lifetime_duration_seconds,
+        max_prolongations,
+        prolongation_window_seconds,
         sender=deployer,
     )
 
@@ -89,19 +97,22 @@ def seal_duration_seconds(day):
     return day * 7
 
 
-@pytest.fixture(scope="function")
-def expiry_timestamp(chain):
-    return lambda: chain.pending_timestamp + MAX_EXPIRY_PERIOD_SECONDS
+@pytest.fixture(scope="session")
+def lifetime_duration_seconds(day):
+    return MAX_LIFETIME_DURATION_SECONDS
 
 
 @pytest.fixture(scope="session")
-def prolongations():
-    return 2
+def max_prolongations():
+    return MAX_PROLONGATIONS
 
 
 @pytest.fixture(scope="session")
-def prolongation_duration_seconds(day):
-    return day * 30 * 6
+def prolongation_window_seconds(day):
+    return MIN_PROLONGATION_WINDOW_SECONDS
+
+
+
 
 
 @pytest.fixture(scope="function")

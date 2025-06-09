@@ -14,9 +14,9 @@ To put such crucial components of the Lido protocol as `WithdrawalQueue` and `Va
 
 Each GateSeal is operated by a committee, essentially a multisig account responsible for pulling the brake in case things go awry. However, authorizing a committee to pause/resume the protocol withdrawals would be utterly reckless which is why GateSeals have a number of safeguards in place:
 - each GateSeal can only be activated only once and becomes unusable immediately after,
-- the expiry period must be between 1 and 3 years and the seal becomes unusable past this timestamp even if it was never triggered,
-- at deployment the DAO chooses how many prolongations are available and how long each prolongation lasts,
-- only the sealing committee may prolong the expiry, provided that:
+- the lifetime duration must be between 1 month and 1 year; if the committee fails to prolong in time or runs out of prolongations, the seal becomes unusable,
+- at deployment the DAO chooses how many prolongations are available and the prolongation window,
+- only the sealing committee may prolong the lifetime, provided that:
   - the GateSeal has not been triggered
   - prolongations remain
   - the GateSeal has not expired
@@ -34,17 +34,16 @@ A GateSeal is set up with an immutable configuration at the time of construction
 - the sealing committee, an account responsible for triggering the seal,
 - the seal duration, a period for which the contracts will be sealed,
 - the sealables, a list of contracts to be sealed,
-- the expiry period, a period after which the GateSeal becomes unusable,
-- the sealing committee allowed to prolong the expiry,
+ - the lifetime duration after which the GateSeal expires unless prolonged,
+ - the sealing committee allowed to prolong the lifetime,
 - the number of prolongations available,
-- the prolongation duration applied on each prolong.
 
 Important to note, that GateSeal does not bypass the access control settings for
-pausable contracts, which is why GateSeal must be given the appropriate permissions beforehand. If the seal has not yet been triggered and has not expired, the sealing committee can call `prolong` to push the expiry forward using one of the remaining prolongations. In an emergency the sealing committee simply calls the `seal` function and puts the contracts on pause for the set duration.
+ pausable contracts, which is why GateSeal must be given the appropriate permissions beforehand. If the seal has not yet been triggered and has not expired, the sealing committee can call `prolongLifetime` to extend the lifetime using one of the remaining prolongations. In an emergency the sealing committee simply calls the `seal` function and puts the contracts on pause for the set duration.
 
 GateSeal is created using the GateSealFactory. The factory uses the blueprint pattern whereby new GateSeal is deployed using the initcode (blueprint) stored onchain. The blueprint is essentially a broken GateSeal that can only be used to create new GateSeal.
 
-The factory's `create_gate_seal` function takes the number of allowed prolongations and the prolongation duration alongside the original parameters.
+The factory's `create_gate_seal` function takes the number of allowed prolongations and the prolongation window alongside the original parameters.
 While Vyper offers other ways to create new contracts, we opted to use the blueprint pattern because it creates a fully autonomous contract without any dependencies. Unlike other contract-creating functions, [`create_from_blueprint`](https://docs.vyperlang.org/en/stable/built-in-functions.html#chain-interaction) invokes the constructor of the contract, thus, helping avoid the initialization shenanigans.
 
 The blueprint follows the [EIP-5202](https://eips.ethereum.org/EIPS/eip-5202) format, which includes a header that prevents the contract from being called and specifies the version. 
@@ -147,8 +146,10 @@ ape run scripts/deploy_factory.py
 - `FACTORY` - address of the GateSealFactory deployed in Step 1;
 - `SEALING_COMMITTEE` - address of the sealing committee;
 - `SEAL_DURATION_SECONDS` - duration of the seal in seconds;
-- `SEALABLES` - a comma-separated list of pausable contracts;
-- `EXPIRY_TIMESTAMP` - a unix epoch when GateSeal expires.
+ - `SEALABLES` - a comma-separated list of pausable contracts;
+ - `LIFETIME_DURATION_SECONDS` - initial lifetime duration of the GateSeal;
+ - `MAX_PROLONGATIONS` - how many prolongations are allowed;
+- `PROLONGATION_WINDOW_SECONDS` - how long before expiry the committee may prolong;
 
 4. Deploy the GateSeal using the deployed factory
 ```shell

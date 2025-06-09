@@ -18,7 +18,9 @@ def main():
     sealing_committee = load_env_variable("SEALING_COMMITTEE")
     seal_duration_seconds = int(load_env_variable("SEAL_DURATION_SECONDS"))
     sealables = load_env_variable("SEALABLES").split(",")
-    expiry_timestamp = int(load_env_variable("EXPIRY_TIMESTAMP"))
+    lifetime_duration_seconds = int(load_env_variable("LIFETIME_DURATION_SECONDS"))
+    max_prolongations = int(load_env_variable("MAX_PROLONGATIONS"))
+    prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
     
     factory = project.GateSealFactory.at(to_checksum_address(factory_address))
 
@@ -26,7 +28,9 @@ def main():
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        expiry_timestamp,
+        lifetime_duration_seconds,
+        max_prolongations,
+        prolongation_window_seconds,
         sender=deployer,
         max_priority_fee="5 gwei"
     )
@@ -49,7 +53,9 @@ def main():
                         "sealing_committee": sealing_committee,
                         "seal_duration_seconds": seal_duration_seconds,
                         "sealables": sealables,
-                        "expiry_timestamp": expiry_timestamp
+                        "lifetime_duration_seconds": lifetime_duration_seconds,
+                        "max_prolongations": max_prolongations,
+                        "prolongation_window_seconds": prolongation_window_seconds,
                     }
                 }
             )
