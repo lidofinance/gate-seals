@@ -7,10 +7,12 @@ from utils.constants import (
     MIN_SEAL_DURATION_SECONDS,
     ZERO_ADDRESS,
     MAX_PROLONGATIONS,
+    TOTAL_LIFETIME_SECONDS,
     MIN_LIFETIME_DURATION_SECONDS,
     MAX_LIFETIME_DURATION_SECONDS,
     MIN_PROLONGATION_WINDOW_SECONDS,
     MAX_PROLONGATION_WINDOW_SECONDS,
+    PROLONGATION_OFFSET_SECONDS,
 )
 
 
@@ -278,6 +280,25 @@ def test_lifetime_duration_exceeds_max(
         )
 
 
+def test_total_lifetime_limit(
+    project,
+    deployer,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+):
+    with pytest.raises(VirtualMachineError, match="total lifetime: exceeds max"):
+        project.GateSealV2.deploy(
+            sealing_committee,
+            seal_duration_seconds,
+            sealables,
+            MIN_LIFETIME_DURATION_SECONDS,
+            MAX_PROLONGATIONS,
+            MIN_PROLONGATION_WINDOW_SECONDS,
+            sender=deployer,
+        )
+
+
 def test_prolongation_window_bounds(
     project,
     deployer,
@@ -321,7 +342,7 @@ def test_prolong_lifetime_window(
         gate_seal.prolongLifetime(sender=sealing_committee)
 
     expiry = gate_seal.get_expiry_timestamp()
-    project.provider.set_timestamp(expiry - prolongation_window_seconds)
+    project.provider.set_timestamp(expiry - PROLONGATION_OFFSET_SECONDS)
     project.provider.mine()
     gate_seal.prolongLifetime(sender=sealing_committee)
     assert gate_seal.get_expiry_timestamp() == expiry + lifetime_duration_seconds
@@ -358,18 +379,19 @@ def test_max_prolongations_max(
     lifetime_duration_seconds,
     prolongation_window_seconds,
 ):
+    allowed = (TOTAL_LIFETIME_SECONDS // lifetime_duration_seconds) - 1
     gate_seal = project.GateSealV2.deploy(
         sealing_committee,
         seal_duration_seconds,
         sealables,
         lifetime_duration_seconds,
-        MAX_PROLONGATIONS,
+        allowed,
         prolongation_window_seconds,
         sender=deployer,
     )
     assert (
-        gate_seal.get_prolongations_remaining() == MAX_PROLONGATIONS
-    ), f"max_prolongations remaining must be max: {MAX_PROLONGATIONS}"
+        gate_seal.get_prolongations_remaining() == allowed
+    ), f"max_prolongations remaining must be max: {allowed}"
 
 
 def test_max_prolongations_zero(
@@ -781,7 +803,7 @@ def test_prolong_before_expiry(
     max_prolongations,
 ):
     old_expiry = gate_seal.get_expiry_timestamp()
-    networks.active_provider.set_timestamp(old_expiry - prolongation_window_seconds)
+    networks.active_provider.set_timestamp(old_expiry - PROLONGATION_OFFSET_SECONDS)
     networks.active_provider.mine()
     gate_seal.prolongLifetime(sender=sealing_committee)
     assert (

@@ -8,6 +8,8 @@ from utils.constants import (
     MAX_PROLONGATION_WINDOW_SECONDS,
     MIN_PROLONGATION_WINDOW_SECONDS,
     MAX_PROLONGATIONS,
+    TOTAL_LIFETIME_SECONDS,
+    MIN_SEAL_DURATION_SECONDS,
     MAX_SEALABLES,
     MIN_SEALABLES,
 )
@@ -93,18 +95,18 @@ def sealables(generate_sealables):
 
 
 @pytest.fixture(scope="session")
-def seal_duration_seconds(day):
-    return day * 7
+def seal_duration_seconds():
+    return MIN_SEAL_DURATION_SECONDS
 
 
 @pytest.fixture(scope="session")
-def lifetime_duration_seconds(day):
-    return MAX_LIFETIME_DURATION_SECONDS
+def lifetime_duration_seconds():
+    return MIN_LIFETIME_DURATION_SECONDS
 
 
 @pytest.fixture(scope="session")
 def max_prolongations():
-    return MAX_PROLONGATIONS
+    return (TOTAL_LIFETIME_SECONDS // MIN_LIFETIME_DURATION_SECONDS) - 1
 
 
 @pytest.fixture(scope="session")

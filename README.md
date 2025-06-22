@@ -15,13 +15,15 @@ To put such crucial components of the Lido protocol as `WithdrawalQueue` and `Va
 
 Each GateSeal is operated by a committee, essentially a multisig account responsible for pulling the brake in case things go awry. However, authorizing a committee to pause/resume the protocol withdrawals would be utterly reckless which is why GateSeals have a number of safeguards in place:
 - each GateSeal can only be activated only once and becomes unusable immediately after,
-- the lifetime duration must be between 6 months and 1 year; if the committee fails to prolong in time or runs out of prolongations, the seal becomes unusable,
+- the lifetime duration must be between 6 months and 2 years; if the committee fails to prolong in time or runs out of prolongations, the seal becomes unusable,
 - at deployment the DAO chooses how many prolongations are available and the prolongation window,
+- the total lifetime of a GateSeal cannot exceed 5 years,
+- the prolongation window opens 2 months before expiry and lasts 7–14 days,
 - only the sealing committee may prolong the lifetime, provided that:
   - the GateSeal has not been triggered
   - prolongations remain
   - the GateSeal has not expired
-- the pause duration set at construction time is limited to 21 days.
+- the pause duration set at construction time must be between 11 and 21 days.
 
 Thus, the biggest damage a compromised GateSeal multisig can inflict is to pause withdrawals for 21 days, given the DAO does not resume withdrawals sooner via the governance voting.
 
@@ -153,6 +155,7 @@ ape run scripts/deploy_factory.py
  - `LIFETIME_DURATION_SECONDS` - lifetime duration of the GateSealV2;
 - `MAX_PROLONGATIONS` - how many prolongations are allowed;
 - `PROLONGATION_WINDOW_SECONDS` - how long before expiry the committee may prolong;
+ - `PROLONGATION_WINDOW_SECONDS` - length of the window (7–14 days) when prolongation is allowed;
 
 4. Deploy the GateSeal using the deployed factory
 ```shell
