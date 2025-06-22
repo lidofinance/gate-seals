@@ -1,4 +1,10 @@
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
+from utils.constants import (
+    MIN_SEAL_DURATION_SECONDS,
+    MIN_LIFETIME_DURATION_SECONDS,
+    MIN_PROLONGATION_WINDOW_SECONDS,
+    TOTAL_LIFETIME_SECONDS,
+)
 
 
 def test_happy_path(networks, chain, project, accounts):
@@ -25,18 +31,18 @@ def test_happy_path(networks, chain, project, accounts):
 
     # Step 5. Set up the GateSealV2 config
     SEALING_COMMITTEE = accounts[1]
-    SEAL_DURATION_SECONDS = 60 * 60 * 24 * 7  # one week
+    SEAL_DURATION_SECONDS = MIN_SEAL_DURATION_SECONDS
     SEALABLES = []
     for _ in range(8):
         SEALABLES.append(project.SealableMock.deploy(False, False, sender=DEPLOYER))
 
     now = chain.pending_timestamp
 
-    LIFETIME_DURATION = 60 * 60 * 24 * 365  # 1 year
+    LIFETIME_DURATION = MIN_LIFETIME_DURATION_SECONDS
 
     # Step 6. Create a GateSealV2 using the factory
-    PROLONGATIONS = 5
-    PROLONGATION_WINDOW = 60 * 60 * 24 * 14  # 2 weeks
+    PROLONGATIONS = (TOTAL_LIFETIME_SECONDS // LIFETIME_DURATION) - 1
+    PROLONGATION_WINDOW = MIN_PROLONGATION_WINDOW_SECONDS
     transaction = gate_seal_factory.create_gate_seal(
         SEALING_COMMITTEE,
         SEAL_DURATION_SECONDS,

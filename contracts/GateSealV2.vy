@@ -38,10 +38,9 @@ interface IPausableUntil:
 
 SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 
-# The minimum allowed seal duration is 6 days. This is because it takes at least
-# 5 days to pass and enact (3 days main phase, 2 days objection phase).
-# Additionally, we want to include a 1-day padding.
-MIN_SEAL_DURATION_DAYS: constant(uint256) = 6
+# The minimum allowed seal duration is 11 days. This covers the
+# dual-governance emergency process (10.5 days) plus a small buffer.
+MIN_SEAL_DURATION_DAYS: constant(uint256) = 11
 MIN_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_SEAL_DURATION_DAYS
 
 # The maximum allowed seal duration is 21 days.
@@ -51,18 +50,25 @@ MIN_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_SEAL_DURATI
 MAX_SEAL_DURATION_DAYS: constant(uint256) = 21
 MAX_SEAL_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_SEAL_DURATION_DAYS
 
-# The lifetime of GateSeal must be between 6 months and 1 year.
+# The lifetime of GateSeal must be between 6 months and 2 years.
 MIN_LIFETIME_DURATION_DAYS: constant(uint256) = 180
 MIN_LIFETIME_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_LIFETIME_DURATION_DAYS
 
-MAX_LIFETIME_DURATION_DAYS: constant(uint256) = 365
+MAX_LIFETIME_DURATION_DAYS: constant(uint256) = 730
 MAX_LIFETIME_DURATION_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_LIFETIME_DURATION_DAYS
 
+# Total lifetime across all prolongations is capped at five years.
+TOTAL_LIFETIME_DAYS: constant(uint256) = 365 * 5
+TOTAL_LIFETIME_SECONDS: constant(uint256) = SECONDS_PER_DAY * TOTAL_LIFETIME_DAYS
+
 # Prolongation window during which the committee may extend the lifetime.
-MIN_PROLONGATION_WINDOW_DAYS: constant(uint256) = 14
+PROLONGATION_OFFSET_DAYS: constant(uint256) = 60
+PROLONGATION_OFFSET_SECONDS: constant(uint256) = SECONDS_PER_DAY * PROLONGATION_OFFSET_DAYS
+
+MIN_PROLONGATION_WINDOW_DAYS: constant(uint256) = 7
 MIN_PROLONGATION_WINDOW_SECONDS: constant(uint256) = SECONDS_PER_DAY * MIN_PROLONGATION_WINDOW_DAYS
 
-MAX_PROLONGATION_WINDOW_DAYS: constant(uint256) = 30
+MAX_PROLONGATION_WINDOW_DAYS: constant(uint256) = 14
 MAX_PROLONGATION_WINDOW_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_PROLONGATION_WINDOW_DAYS
 
 # The maximum number of sealables is 8.
@@ -123,9 +129,11 @@ def __init__(
     assert _lifetime_duration_seconds <= MAX_LIFETIME_DURATION_SECONDS, "lifetime duration: exceeds max"
     assert _prolongations <= MAX_PROLONGATIONS, "max prolongations: exceeds max"
     assert _prolongations >= 0, "max prolongations: must be non-negative"
+    assert _lifetime_duration_seconds * (_prolongations + 1) <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
 
     assert _prolongation_window_seconds >= MIN_PROLONGATION_WINDOW_SECONDS, "prolongation window: too short"
     assert _prolongation_window_seconds <= MAX_PROLONGATION_WINDOW_SECONDS, "prolongation window: exceeds max"
+    assert _prolongation_window_seconds <= PROLONGATION_OFFSET_SECONDS, "prolongation window: exceeds offset"
     assert _prolongation_window_seconds <= _lifetime_duration_seconds, "prolongation window: exceeds lifetime"
 
     for sealable: address in _sealables:
@@ -198,7 +206,10 @@ def prolongLifetime():
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
     assert self.prolongations_remaining > 0, "prolongations: exhausted"
-    assert block.timestamp >= self.expiry_timestamp - PROLONGATION_WINDOW_SECONDS, "prolongation window: too early"
+    start: uint256 = self.expiry_timestamp - PROLONGATION_OFFSET_SECONDS
+    end: uint256 = start + PROLONGATION_WINDOW_SECONDS
+    assert block.timestamp >= start, "prolongation window: too early"
+    assert block.timestamp <= end, "prolongation window: expired"
 
     self.expiry_timestamp += LIFETIME_DURATION_SECONDS
     self.prolongations_remaining -= 1
