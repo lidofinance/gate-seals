@@ -1,18 +1,14 @@
 import pytest
 from random import randint
-from ape.logging import logger
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import (
-    MAX_LIFETIME_DURATION_SECONDS,
     MIN_LIFETIME_DURATION_SECONDS,
-    MAX_PROLONGATION_WINDOW_SECONDS,
     MIN_PROLONGATION_WINDOW_SECONDS,
-    MAX_PROLONGATIONS,
-    TOTAL_LIFETIME_SECONDS,
     MIN_SEAL_DURATION_SECONDS,
     MAX_SEALABLES,
     MIN_SEALABLES,
 )
+from utils.helpers import calculated_max_prolongations
 
 """
 
@@ -105,16 +101,13 @@ def lifetime_duration_seconds():
 
 
 @pytest.fixture(scope="session")
-def max_prolongations():
-    return (TOTAL_LIFETIME_SECONDS // MIN_LIFETIME_DURATION_SECONDS) - 1
+def max_prolongations(lifetime_duration_seconds):
+    return calculated_max_prolongations(lifetime_duration_seconds)
 
 
 @pytest.fixture(scope="session")
 def prolongation_window_seconds(day):
     return MIN_PROLONGATION_WINDOW_SECONDS
-
-
-
 
 
 @pytest.fixture(scope="function")

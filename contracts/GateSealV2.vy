@@ -12,12 +12,10 @@
      hold a vote, implement fixes, etc. GateSeal can only be used once.
      GateSeal assumes that they have the permission to pause the contracts.
 
-     GateSeals are only a temporary solution and will be deprecated in the future,
-     as it is undesirable for the protocol to rely on a multisig. This is why
-     each GateSeal has an expiry date. Once expired, GateSeal is no longer
-     usable and a new GateSeal must be set up with a new multisig committee. This
-     works as a kind of difficulty bomb, a device that encourages the protocol
-     to get rid of GateSeals sooner rather than later.
+     Initially introduced as an emergency 'circuit breaker', GateSeals have evolved in version 2 to function as a long-term safety mechanism.
+     A committee ensures the GateSeal remains viable by prolonging its duration periodically.
+     Should they fail to do so, the GateSeal will automatically expire, necessitating the deployment of a new one.
+     This approach maintains the multisig's limitations in terms of power and duration, while allowing the DAO to bypass the need for an annual full vote.
 
      In the context of GateSeals, sealing is synonymous with pausing the contracts,
      sealables are pausable contracts that implement `pauseFor(duration)` interface.
@@ -77,9 +75,6 @@ MAX_PROLONGATION_WINDOW_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_PROLO
 # is why we've opted to use a dynamic-size array.
 MAX_SEALABLES: constant(uint256) = 8
 
-# Maximum number of prolongations allowed
-MAX_PROLONGATIONS: constant(uint256) = 10
-
 # To simplify the code, we chose not to implement committees in GateSeals.
 # Instead, GateSeals are operated by a single account which must be a multisig.
 # The code does not perform any such checks but we pinky-promise that
@@ -127,14 +122,12 @@ def __init__(
     assert len(_sealables) > 0, "sealables: empty list"
     assert _lifetime_duration_seconds >= MIN_LIFETIME_DURATION_SECONDS, "lifetime duration: too short"
     assert _lifetime_duration_seconds <= MAX_LIFETIME_DURATION_SECONDS, "lifetime duration: exceeds max"
-    assert _prolongations <= MAX_PROLONGATIONS, "max prolongations: exceeds max"
     assert _prolongations >= 0, "max prolongations: must be non-negative"
     assert _lifetime_duration_seconds * (_prolongations + 1) <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
 
     assert _prolongation_window_seconds >= MIN_PROLONGATION_WINDOW_SECONDS, "prolongation window: too short"
     assert _prolongation_window_seconds <= MAX_PROLONGATION_WINDOW_SECONDS, "prolongation window: exceeds max"
     assert _prolongation_window_seconds <= PROLONGATION_OFFSET_SECONDS, "prolongation window: exceeds offset"
-    assert _prolongation_window_seconds <= _lifetime_duration_seconds, "prolongation window: exceeds lifetime"
 
     for sealable: address in _sealables:
         assert sealable != empty(address), "sealables: includes zero address"

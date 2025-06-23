@@ -1,5 +1,13 @@
 name: gate-seal
 
+plugins:
+  - name: vyper
+    version: 0.8.9
+  - name: hardhat
+    version: 0.8.5
+  - name: infura  
+    version: 0.8.4
+
 compile:
   exclude:
     - contracts/GateSeal.vy
