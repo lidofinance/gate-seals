@@ -1,9 +1,8 @@
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import (
-    MIN_SEAL_DURATION_SECONDS,
-    MIN_LIFETIME_DURATION_SECONDS,
-    MIN_PROLONGATION_WINDOW_SECONDS,
+    PROLONGATION_PERIOD_SECONDS,
     TOTAL_LIFETIME_SECONDS,
+    SECONDS_PER_DAY,
 )
 
 
@@ -31,25 +30,23 @@ def test_happy_path(networks, chain, project, accounts):
 
     # Step 5. Set up the GateSealV2 config
     SEALING_COMMITTEE = accounts[1]
-    SEAL_DURATION_SECONDS = MIN_SEAL_DURATION_SECONDS
+    SEAL_DURATION_SECONDS = SECONDS_PER_DAY * 11
     SEALABLES = []
     for _ in range(8):
         SEALABLES.append(project.SealableMock.deploy(False, False, sender=DEPLOYER))
 
     now = chain.pending_timestamp
 
-    LIFETIME_DURATION = MIN_LIFETIME_DURATION_SECONDS
+    LIFETIME_DURATION = PROLONGATION_PERIOD_SECONDS
 
     # Step 6. Create a GateSealV2 using the factory
     PROLONGATIONS = (TOTAL_LIFETIME_SECONDS // LIFETIME_DURATION) - 1
-    PROLONGATION_WINDOW = MIN_PROLONGATION_WINDOW_SECONDS
     transaction = gate_seal_factory.create_gate_seal(
         SEALING_COMMITTEE,
         SEAL_DURATION_SECONDS,
         SEALABLES,
         LIFETIME_DURATION,
         PROLONGATIONS,
-        PROLONGATION_WINDOW,
         sender=DEPLOYER,
     )
 
@@ -66,7 +63,7 @@ def test_happy_path(networks, chain, project, accounts):
 
     # Step 7. Seal one of the sealables
     SEALABLE = SEALABLES[0]
-    gate_seal.seal([SEALABLE], sender=SEALING_COMMITTEE)
+    gate_seal.seal(sender=SEALING_COMMITTEE)
     assert project.SealableMock.at(SEALABLE).isPaused(), "failed to seal"
 
     assert gate_seal.is_expired(), "must be expired after sealing all"

@@ -18,7 +18,7 @@ def main():
     sealing_committee = load_env_variable("SEALING_COMMITTEE")
     seal_duration_seconds = int(load_env_variable("SEAL_DURATION_SECONDS"))
     sealables = load_env_variable("SEALABLES").split(",")
-    lifetime_duration_seconds = int(load_env_variable("LIFETIME_DURATION_SECONDS"))
+    lifetime_duration_seconds = int(load_env_variable("PROLONGATION_PERIOD_SECONDS"))
     max_prolongations = int(load_env_variable("MAX_PROLONGATIONS"))
     prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
     

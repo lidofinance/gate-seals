@@ -2,11 +2,10 @@ import pytest
 from random import randint
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import (
-    MIN_LIFETIME_DURATION_SECONDS,
-    MIN_PROLONGATION_WINDOW_SECONDS,
-    MIN_SEAL_DURATION_SECONDS,
+    PROLONGATION_PERIOD_SECONDS,
     MAX_SEALABLES,
     MIN_SEALABLES,
+    SECONDS_PER_DAY,
 )
 from utils.helpers import calculated_max_prolongations
 
@@ -59,17 +58,15 @@ def gate_seal(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    lifetime_duration_seconds,
+    initial_lifetime_seconds,
     max_prolongations,
-    prolongation_window_seconds,
 ):
     transaction = gate_seal_factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        lifetime_duration_seconds,
+        initial_lifetime_seconds,
         max_prolongations,
-        prolongation_window_seconds,
         sender=deployer,
     )
 
@@ -92,22 +89,17 @@ def sealables(generate_sealables):
 
 @pytest.fixture(scope="session")
 def seal_duration_seconds():
-    return MIN_SEAL_DURATION_SECONDS
+    return SECONDS_PER_DAY * 11  # 11 days for DG compatibility
 
 
 @pytest.fixture(scope="session")
-def lifetime_duration_seconds():
-    return MIN_LIFETIME_DURATION_SECONDS
+def initial_lifetime_seconds():
+    return PROLONGATION_PERIOD_SECONDS
 
 
 @pytest.fixture(scope="session")
-def max_prolongations(lifetime_duration_seconds):
-    return calculated_max_prolongations(lifetime_duration_seconds)
-
-
-@pytest.fixture(scope="session")
-def prolongation_window_seconds(day):
-    return MIN_PROLONGATION_WINDOW_SECONDS
+def max_prolongations(initial_lifetime_seconds):
+    return calculated_max_prolongations(initial_lifetime_seconds)
 
 
 @pytest.fixture(scope="function")
