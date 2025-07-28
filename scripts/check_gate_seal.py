@@ -31,8 +31,8 @@ def main():
     assert gate_seal.get_sealables() == deployed_data["params"]["sealables"]
     logger.success("sealables matches!")
 
-    assert gate_seal.get_lifetime_duration_seconds() == deployed_data["params"]["lifetime_duration_seconds"]
-    logger.success("lifetime_duration_seconds matches!")
+    assert gate_seal.get_prolongation_period_seconds() == deployed_data["params"]["lifetime_duration_seconds"]
+    logger.success("prolongation_period_seconds matches!")
     assert gate_seal.get_prolongation_window_seconds() == deployed_data["params"]["prolongation_window_seconds"]
     logger.success("prolongation_window_seconds matches!")
 
