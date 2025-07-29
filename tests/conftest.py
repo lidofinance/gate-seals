@@ -125,3 +125,25 @@ def generate_sealables(project, deployer):
         project.SealableMock.deploy(unpausable, reverts, sender=deployer)
         for _ in range(n)
     ]
+
+
+@pytest.fixture(scope="function")
+def deploy_gate_seal(project, gate_seal_factory, deployer):
+    def _deploy(
+        committee,
+        sealables,
+        initial_lifetime,
+        prolongations,
+        seal_duration=SECONDS_PER_DAY * 11,
+    ):
+        tx = gate_seal_factory.create_gate_seal(
+            committee,
+            seal_duration,
+            sealables,
+            initial_lifetime,
+            prolongations,
+            sender=deployer,
+        )
+        return project.GateSealV2.at(tx.events[0].gate_seal)
+
+    return _deploy

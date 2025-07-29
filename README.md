@@ -136,7 +136,7 @@ export MAINNET_RPC_ENDPOINT=<your-mainnet-rpc-endpoint>
 
 By default tests run on the local Hardhat network,
 ```shell
-ape test
+poetry run ape test -q
 ```
 
 ### Deploy

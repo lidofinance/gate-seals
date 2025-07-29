@@ -10,35 +10,11 @@ from utils.constants import (
 )
 
 
-def deploy_gate_seal(
-    project,
-    factory,
-    deployer,
-    committee,
-    sealables,
-    initial_lifetime,
-    prolongations,
-    seal_duration=SECONDS_PER_DAY * 11,
-):
-    tx = factory.create_gate_seal(
-        committee,
-        seal_duration,
-        sealables,
-        initial_lifetime,
-        prolongations,
-        sender=deployer,
-    )
-    return project.GateSealV2.at(tx.events[0].gate_seal)
-
-
 def test_deploy_and_seal_all(
-    project, gate_seal_factory, deployer, sealing_committee, generate_sealables
+    project, deploy_gate_seal, sealing_committee, generate_sealables
 ):
     sealables = generate_sealables(2)
     gate_seal = deploy_gate_seal(
-        project,
-        gate_seal_factory,
-        deployer,
         sealing_committee,
         sealables,
         PROLONGATION_PERIOD_SECONDS,
@@ -53,16 +29,11 @@ def test_deploy_and_seal_all(
 
 def test_prolongation_in_window(
     networks,
-    gate_seal_factory,
-    project,
-    deployer,
+    deploy_gate_seal,
     sealing_committee,
     generate_sealables,
 ):
     gate_seal = deploy_gate_seal(
-        project,
-        gate_seal_factory,
-        deployer,
         sealing_committee,
         generate_sealables(1),
         PROLONGATION_PERIOD_SECONDS,
@@ -83,16 +54,11 @@ def test_prolongation_in_window(
 
 def test_prolongation_too_early(
     networks,
-    gate_seal_factory,
-    project,
-    deployer,
+    deploy_gate_seal,
     sealing_committee,
     generate_sealables,
 ):
     gate_seal = deploy_gate_seal(
-        project,
-        gate_seal_factory,
-        deployer,
         sealing_committee,
         generate_sealables(1),
         PROLONGATION_PERIOD_SECONDS,
@@ -113,16 +79,11 @@ def test_prolongation_too_early(
 
 def test_prolongation_too_late(
     networks,
-    gate_seal_factory,
-    project,
-    deployer,
+    deploy_gate_seal,
     sealing_committee,
     generate_sealables,
 ):
     gate_seal = deploy_gate_seal(
-        project,
-        gate_seal_factory,
-        deployer,
         sealing_committee,
         generate_sealables(1),
         PROLONGATION_PERIOD_SECONDS,
@@ -138,13 +99,10 @@ def test_prolongation_too_late(
 
 
 def test_total_lifetime_limit(
-    project, gate_seal_factory, deployer, sealing_committee, generate_sealables
+    deploy_gate_seal, sealing_committee, generate_sealables
 ):
     with pytest.raises(VirtualMachineError):
         deploy_gate_seal(
-            project,
-            gate_seal_factory,
-            deployer,
             sealing_committee,
             generate_sealables(1),
             PROLONGATION_PERIOD_SECONDS * 2,
@@ -153,13 +111,10 @@ def test_total_lifetime_limit(
 
 
 def test_initial_lifetime_too_short(
-    project, gate_seal_factory, deployer, sealing_committee, generate_sealables
+    deploy_gate_seal, sealing_committee, generate_sealables
 ):
     with pytest.raises(VirtualMachineError):
         deploy_gate_seal(
-            project,
-            gate_seal_factory,
-            deployer,
             sealing_committee,
             generate_sealables(1),
             MIN_INITIAL_LIFETIME_SECONDS - 1,
@@ -168,13 +123,10 @@ def test_initial_lifetime_too_short(
 
 
 def test_initial_lifetime_too_long(
-    project, gate_seal_factory, deployer, sealing_committee, generate_sealables
+    deploy_gate_seal, sealing_committee, generate_sealables
 ):
     with pytest.raises(VirtualMachineError):
         deploy_gate_seal(
-            project,
-            gate_seal_factory,
-            deployer,
             sealing_committee,
             generate_sealables(1),
             MAX_INITIAL_LIFETIME_SECONDS + 1,
@@ -184,16 +136,11 @@ def test_initial_lifetime_too_long(
 
 def test_cannot_prolong_twice(
     networks,
-    gate_seal_factory,
-    project,
-    deployer,
+    deploy_gate_seal,
     sealing_committee,
     generate_sealables,
 ):
     gate_seal = deploy_gate_seal(
-        project,
-        gate_seal_factory,
-        deployer,
         sealing_committee,
         generate_sealables(1),
         PROLONGATION_PERIOD_SECONDS,
@@ -212,16 +159,11 @@ def test_cannot_prolong_twice(
 
 def test_prolongation_view_functions(
     networks,
-    gate_seal_factory,
-    project,
-    deployer,
+    deploy_gate_seal,
     sealing_committee,
     generate_sealables,
 ):
     gate_seal = deploy_gate_seal(
-        project,
-        gate_seal_factory,
-        deployer,
         sealing_committee,
         generate_sealables(1),
         PROLONGATION_PERIOD_SECONDS,
