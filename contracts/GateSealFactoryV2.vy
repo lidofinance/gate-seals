@@ -14,7 +14,7 @@
      functioning GateSeal itself but only its initcode.
 
      More on blueprints
-     https://docs.vyperlang.org/en/v0.4.1/built-in-functions.html#chain-interaction
+     https://docs.vyperlang.org/en/v0.4.2/built-in-functions.html#chain-interaction
 
      More on EIP-5202
      https://eips.ethereum.org/EIPS/eip-5202
