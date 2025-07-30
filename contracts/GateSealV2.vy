@@ -4,21 +4,21 @@
 @title GateSealV2
 @author alex.k@lido.fi
 @notice A one-time panic button for pausable contracts
-@dev GateSeal is an one-time immediate emergency pause for pausable contracts.
+@dev GateSeal is a one-time immediate emergency pause for pausable contracts.
      It must be operated by a multisig committee, though the code does not
      perform any such checks. Bypassing the DAO vote, GateSeal pauses 
      the contract(s) immediately for a set duration, e.g. one week, which gives
-     the DAO the time to analyze the situation, decide on the course of action,
+     the DAO time to analyze the situation, decide on the course of action,
      hold a vote, implement fixes, etc. GateSeal can only be used once.
-     GateSeal assumes that they have the permission to pause the contracts.
+     GateSeal assumes that it has the permission to pause the contracts.
 
-     Initially introduced as an emergency 'circuit breaker', GateSeals have evolved in version 2 to function as a long-term safety mechanism.
+     GateSeals serve as a long-term safety mechanism. 
      A committee ensures the GateSeal remains viable by prolonging its duration periodically.
-     Should they fail to do so, the GateSeal will automatically expire, necessitating the deployment of a new one.
+     Should they fail to do so, the GateSeal will automatically expire, requiring the deployment of a new one.
      This approach maintains the multisig's limitations in terms of power and duration, while allowing the DAO to bypass the need for an annual full vote.
 
-     In the context of GateSeals, sealing is synonymous with pausing the contracts,
-     sealables are pausable contracts that implement `pauseFor(duration)` interface.
+     In the context of GateSeals, sealing is synonymous with pausing the contracts.
+     Sealables are pausable contracts that implement the `pauseFor(duration)` interface.
 """
 
 
