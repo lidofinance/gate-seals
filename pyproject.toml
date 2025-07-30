@@ -7,7 +7,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10.13"
-vyper = "0.4.1"
+vyper = "0.4.2"
 ape-hardhat = "0.8.5"
 ape-vyper = "0.8.9"
 ape-infura = "0.8.4"
