@@ -172,20 +172,20 @@ def get_prolongation_window_seconds() -> uint256:
 @external
 @view
 def get_prolongation_window_start() -> uint256:
-    return self.expiry_timestamp - DAO_RESERVE_SECONDS - PROLONGATION_WINDOW_SECONDS
+    return self._get_prolongation_window_start()
 
 
 @external
 @view
 def get_prolongation_window_end() -> uint256:
-    return self.expiry_timestamp - DAO_RESERVE_SECONDS
+    return self._get_prolongation_window_end()
 
 
 @external
 @view
 def is_in_prolongation_window() -> bool:
-    start: uint256 = self.expiry_timestamp - DAO_RESERVE_SECONDS - PROLONGATION_WINDOW_SECONDS
-    end: uint256 = self.expiry_timestamp - DAO_RESERVE_SECONDS
+    start: uint256 = self._get_prolongation_window_start()
+    end: uint256 = self._get_prolongation_window_end()
     return block.timestamp >= start and block.timestamp <= end
 
 @external
@@ -216,8 +216,8 @@ def prolongLifetime():
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "gate seal: expired"
     assert self.prolongations_remaining > 0, "prolongations: exhausted"
-    start: uint256 = self.expiry_timestamp - DAO_RESERVE_SECONDS - PROLONGATION_WINDOW_SECONDS
-    end: uint256 = self.expiry_timestamp - DAO_RESERVE_SECONDS
+    start: uint256 = self._get_prolongation_window_start()
+    end: uint256 = self._get_prolongation_window_end()
     assert block.timestamp >= start, "prolongation window: too early"
     assert block.timestamp <= end, "prolongation window: expired"
 
@@ -279,6 +279,17 @@ def _is_expired() -> bool:
 @internal
 def _expire_immediately():
     self.expiry_timestamp = block.timestamp
+
+@internal
+@view
+def _get_prolongation_window_start() -> uint256:
+    return self.expiry_timestamp - DAO_RESERVE_SECONDS - PROLONGATION_WINDOW_SECONDS
+
+
+@internal
+@view
+def _get_prolongation_window_end() -> uint256:
+    return self.expiry_timestamp - DAO_RESERVE_SECONDS
 
 
 @internal
