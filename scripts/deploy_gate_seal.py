@@ -8,6 +8,7 @@ from eth_utils.address import to_checksum_address
 from utils.config import get_deployer
 from utils.env import load_env_variable
 from utils.helpers import construct_deployed_filename
+from utils.constants import PROLONGATION_PERIOD_SECONDS
 
 
 def main():
@@ -18,21 +19,23 @@ def main():
     sealing_committee = load_env_variable("SEALING_COMMITTEE")
     seal_duration_seconds = int(load_env_variable("SEAL_DURATION_SECONDS"))
     sealables = load_env_variable("SEALABLES").split(",")
-    lifetime_duration_seconds = int(load_env_variable("LIFETIME_DURATION_SECONDS"))
-    max_prolongations = int(load_env_variable("MAX_PROLONGATIONS"))
-    prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
-    
+    initial_lifetime_seconds = int(load_env_variable("INITIAL_LIFETIME_SECONDS"))
+    prolongations = int(load_env_variable("PROLONGATIONS"))
+
+    logger.info(
+        f"Deploying GateSeal with {prolongations} prolongations (initial: {initial_lifetime_seconds // (60*60*24)} days → total: {(initial_lifetime_seconds + prolongations * PROLONGATION_PERIOD_SECONDS) // (60*60*24)} days)"
+    )
+
     factory = project.GateSealFactoryV2.at(to_checksum_address(factory_address))
 
     transaction = factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
+        initial_lifetime_seconds,
+        prolongations,
         sender=deployer,
-        max_priority_fee="5 gwei"
+        max_priority_fee="5 gwei",
     )
 
     gate_seal_address = transaction.events[0].gate_seal
@@ -53,10 +56,9 @@ def main():
                         "sealing_committee": sealing_committee,
                         "seal_duration_seconds": seal_duration_seconds,
                         "sealables": sealables,
-                        "lifetime_duration_seconds": lifetime_duration_seconds,
-                        "max_prolongations": max_prolongations,
-                        "prolongation_window_seconds": prolongation_window_seconds,
-                    }
+                        "initial_lifetime_seconds": initial_lifetime_seconds,
+                        "prolongations": prolongations,
+                    },
                 }
             )
         )

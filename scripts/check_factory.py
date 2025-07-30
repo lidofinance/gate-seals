@@ -1,11 +1,9 @@
-import sys
 import json
 from ape import project, accounts, chain, networks
 from ape.logging import logger
 from eth_utils.address import to_checksum_address
 from utils.constants import (
-    MAX_LIFETIME_DURATION_SECONDS,
-    MIN_PROLONGATION_WINDOW_SECONDS,
+    MAX_INITIAL_LIFETIME_SECONDS,
 )
 from utils.env import load_env_variable
 from utils.helpers import construct_deployed_filename
@@ -14,7 +12,9 @@ from utils.helpers import construct_deployed_filename
 def main():
     factory_address = load_env_variable("FACTORY")
 
-    deployed_filename = construct_deployed_filename(factory_address, "factory", check=True)
+    deployed_filename = construct_deployed_filename(
+        factory_address, "factory", check=True
+    )
 
     with open(deployed_filename, "r") as deployed_file:
         deployed_data = json.load(deployed_file)
@@ -35,8 +35,9 @@ def main():
     sealing_committee = deployer
     seal_duration_seconds = 60 * 60 * 24 * 7  # week
     sealables = [sealable.address]
-    lifetime_duration_seconds = MAX_LIFETIME_DURATION_SECONDS
+    lifetime_duration_seconds = MAX_INITIAL_LIFETIME_SECONDS
     expiry_timestamp = chain.pending_timestamp + lifetime_duration_seconds
+    prolongations = 3
 
     logger.info("Creating GateSeal...")
     tx = factory.create_gate_seal(
@@ -44,8 +45,7 @@ def main():
         seal_duration_seconds,
         sealables,
         lifetime_duration_seconds,
-        0,
-        MIN_PROLONGATION_WINDOW_SECONDS,
+        prolongations,
         sender=deployer,
     )
     logger.info("GateSeal deployed!")
@@ -61,6 +61,10 @@ def main():
     logger.success("Seal duration matches")
     assert gate_seal.get_sealables() == sealables
     logger.success("Sealables match")
+    assert gate_seal.get_initial_lifetime_seconds() == lifetime_duration_seconds
+    logger.success("Initial lifetime matches")
+    assert gate_seal.get_prolongations_remaining() == prolongations
+    logger.success("Prolongations remaining matches")
     assert gate_seal.get_expiry_timestamp() == expiry_timestamp
     logger.success("Expiry timestamp matches")
 

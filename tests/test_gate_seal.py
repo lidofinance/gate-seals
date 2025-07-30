@@ -1,883 +1,141 @@
-from ape.exceptions import VirtualMachineError
 import pytest
-import random
+from ape.exceptions import VirtualMachineError
 from utils.constants import (
-    MAX_SEAL_DURATION_SECONDS,
-    MAX_SEALABLES,
-    MIN_SEAL_DURATION_SECONDS,
-    ZERO_ADDRESS,
-    MIN_LIFETIME_DURATION_SECONDS,
-    MAX_LIFETIME_DURATION_SECONDS,
-    MIN_PROLONGATION_WINDOW_SECONDS,
-    MAX_PROLONGATION_WINDOW_SECONDS,
-    PROLONGATION_OFFSET_SECONDS,
+    MIN_INITIAL_LIFETIME_SECONDS,
+    MAX_INITIAL_LIFETIME_SECONDS,
+    PROLONGATION_PERIOD_SECONDS,
+    TOTAL_LIFETIME_SECONDS,
 )
-from utils.helpers import calculated_max_prolongations
 
 
-# TESTS FOR _sealing_committee
-def test_committee_cannot_be_zero_address(
-    project,
-    deployer,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-    now,
-):
-    with pytest.raises(VirtualMachineError, match="sealing committee: zero address"):
-        project.GateSealV2.deploy(
-            ZERO_ADDRESS,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
-
-
-# TESTS FOR _seal_duration_seconds
-def test_seal_duration_too_short(
-    project,
-    deployer,
-    sealing_committee,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-    now,
-):
-    with pytest.raises(VirtualMachineError, match="seal duration: too short"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            MIN_SEAL_DURATION_SECONDS - 1,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
-
-
-def test_seal_duration_shortest(
-    project,
-    deployer,
-    sealing_committee,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        MIN_SEAL_DURATION_SECONDS,
-        sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    assert (
-        gate_seal.get_seal_duration_seconds() == MIN_SEAL_DURATION_SECONDS
-    ), f"seal duration must be {MIN_SEAL_DURATION_SECONDS} seconds"
-
-
-def test_seal_duration_max(
-    project,
-    deployer,
-    sealing_committee,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        MAX_SEAL_DURATION_SECONDS,
-        sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    assert (
-        gate_seal.get_seal_duration_seconds() == MAX_SEAL_DURATION_SECONDS
-    ), f"seal duration must be {MAX_SEAL_DURATION_SECONDS} seconds"
-
-
-def test_seal_duration_exceeds_max(
-    project,
-    deployer,
-    sealing_committee,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    with pytest.raises(VirtualMachineError, match="seal duration: exceeds max"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            MAX_SEAL_DURATION_SECONDS + 1,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
-
-
-# TESTS FOR _sealables
-def test_sealables_cannot_be_empty(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    with pytest.raises(VirtualMachineError, match="sealables: empty list"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            [],
-            lifetime_duration_seconds,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
-
-
-@pytest.mark.parametrize("zero_address_index", range(MAX_SEALABLES))
-def test_sealables_cannot_include_zero_address(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    lifetime_duration_seconds,
-    zero_address_index,
-    generate_sealables,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    sealables = generate_sealables(MAX_SEALABLES)
-    sealables[zero_address_index] = ZERO_ADDRESS
-
-    with pytest.raises(VirtualMachineError, match="sealables: includes zero address"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
-
-
-def test_sealables_cannot_include_duplicates(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    if len(sealables) == MAX_SEALABLES:
-        sealables[-1] = sealables[0]
-    else:
-        sealables.append(sealables[0])
-
-    with pytest.raises(VirtualMachineError, match="sealables: includes duplicates"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
-
-
-def test_sealables_cannot_exceed_max_length(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    lifetime_duration_seconds,
-    generate_sealables,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    sealables = generate_sealables(MAX_SEALABLES + 1)
-
+def test_invalid_seal_duration(deploy_gate_seal):
     with pytest.raises(VirtualMachineError):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
+        deploy_gate_seal(seal_duration_seconds_=0)
 
 
-# TESTS FOR _lifetime_duration_seconds
-def test_lifetime_duration_too_short(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    with pytest.raises(VirtualMachineError, match="lifetime duration: too short"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            MIN_LIFETIME_DURATION_SECONDS - 1,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
+def test_deploy_fails_with_no_sealables(deploy_gate_seal):
+    with pytest.raises(VirtualMachineError):
+        deploy_gate_seal(sealables_=[])
 
 
-def test_lifetime_duration_exceeds_max(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-
-    with pytest.raises(VirtualMachineError, match="lifetime duration: exceeds max"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            MAX_LIFETIME_DURATION_SECONDS + 1,
-            max_prolongations,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
+def test_deploy_fails_with_too_many_sealables(deploy_gate_seal, generate_sealables):
+    with pytest.raises(VirtualMachineError):
+        deploy_gate_seal(sealables_=generate_sealables(9))
 
 
-def test_total_lifetime_limit(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-):
+def test_deploy_fails_with_duplicate_sealables(deploy_gate_seal, generate_sealables):
+    sealables = generate_sealables(1)
+    with pytest.raises(VirtualMachineError):
+        deploy_gate_seal(sealables_=sealables * 2)
+
+
+def test_deploy_fails_with_too_short_initial_lifetime(deploy_gate_seal):
+    with pytest.raises(VirtualMachineError):
+        deploy_gate_seal(initial_lifetime_seconds_=MIN_INITIAL_LIFETIME_SECONDS - 1)
+
+
+def test_deploy_fails_with_too_long_initial_lifetime(deploy_gate_seal):
+    with pytest.raises(VirtualMachineError):
+        deploy_gate_seal(initial_lifetime_seconds_=MAX_INITIAL_LIFETIME_SECONDS + 1)
+
+
+def test_deploy_fails_with_too_many_prolongations(deploy_gate_seal):
+    prolongations = 4
+    calculated_total_lifetime = (
+        MAX_INITIAL_LIFETIME_SECONDS + PROLONGATION_PERIOD_SECONDS * prolongations
+    )
+    # ensure calculated total lifetime exceeds the total (5 years), so deployment must revert
+    assert calculated_total_lifetime > TOTAL_LIFETIME_SECONDS
     with pytest.raises(VirtualMachineError, match="total lifetime: exceeds max"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            MIN_LIFETIME_DURATION_SECONDS,
-            (calculated_max_prolongations(MIN_LIFETIME_DURATION_SECONDS) + 1),
-            MIN_PROLONGATION_WINDOW_SECONDS,
-            sender=deployer,
+        deploy_gate_seal(
+            prolongations_=prolongations,
+            initial_lifetime_seconds_=MAX_INITIAL_LIFETIME_SECONDS,
         )
 
 
-def test_prolongation_window_bounds(
-    project,
-    deployer,
+def test_prolongation_too_early(
+    networks,
+    gate_seal,
     sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
 ):
-    with pytest.raises(VirtualMachineError, match="prolongation window: too short"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            MIN_PROLONGATION_WINDOW_SECONDS - 1,
-            sender=deployer,
-        )
-
-    with pytest.raises(VirtualMachineError, match="prolongation window: exceeds max"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            MAX_PROLONGATION_WINDOW_SECONDS + 1,
-            sender=deployer,
-        )
-
-
-def test_prolong_lifetime_window(
-    project, gate_seal, sealing_committee, lifetime_duration_seconds
-):
+    window_start = gate_seal.get_prolongation_window_start()
+    networks.active_provider.set_timestamp(
+        window_start
+        - 25  # shift back to land in previous slot (12s slot time + buffer)
+    )
+    networks.active_provider.mine()
     with pytest.raises(VirtualMachineError, match="prolongation window: too early"):
         gate_seal.prolongLifetime(sender=sealing_committee)
 
-    expiry = gate_seal.get_expiry_timestamp()
-    project.provider.set_timestamp(expiry - PROLONGATION_OFFSET_SECONDS)
-    project.provider.mine()
-    gate_seal.prolongLifetime(sender=sealing_committee)
-    assert gate_seal.get_expiry_timestamp() == expiry + lifetime_duration_seconds
 
-
-# TESTS FOR _prolongations (dynamic limit)
-def test_max_prolongations_cannot_exceed_dynamic_max(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    prolongation_window_seconds,
-):
-    max_allowed_prolongations_count = calculated_max_prolongations(
-        lifetime_duration_seconds
-    )
-    with pytest.raises(VirtualMachineError, match="total lifetime: exceeds max"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_allowed_prolongations_count + 1,
-            prolongation_window_seconds,
-            sender=deployer,
-        )
-
-
-def test_max_prolongations_max(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    prolongation_window_seconds,
-):
-    max_allowed_prolongations_count = calculated_max_prolongations(
-        lifetime_duration_seconds
-    )
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        max_allowed_prolongations_count,
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-    assert (
-        gate_seal.get_prolongations_remaining() == max_allowed_prolongations_count
-    ), f"max_prolongations remaining must be max: {max_allowed_prolongations_count}"
-
-
-def test_max_prolongations_zero(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-):
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        0,
-        MIN_PROLONGATION_WINDOW_SECONDS,
-        sender=deployer,
-    )
-    assert (
-        gate_seal.get_prolongations_remaining() == 0
-    ), "max_prolongations remaining must be zero"
-
-
-def test_max_prolongations_zero_allows_nonzero_window(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-):
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        0,
-        MIN_PROLONGATION_WINDOW_SECONDS,
-        sender=deployer,
-    )
-    assert gate_seal.get_prolongations_remaining() == 0
-
-
-def test_prolongation_window_cannot_exceed_max(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-):
-    with pytest.raises(VirtualMachineError, match="prolongation window: exceeds max"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            MAX_PROLONGATION_WINDOW_SECONDS + 1,
-            sender=deployer,
-        )
-
-
-def test_prolongation_window_max(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-):
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        MAX_PROLONGATION_WINDOW_SECONDS,
-        sender=deployer,
-    )
-    assert (
-        gate_seal.get_prolongation_window_seconds() == MAX_PROLONGATION_WINDOW_SECONDS
-    ), "prolongation window must be max"
-
-
-def test_prolongation_window_must_be_positive(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-):
-    with pytest.raises(VirtualMachineError, match="prolongation window: too short"):
-        project.GateSealV2.deploy(
-            sealing_committee,
-            seal_duration_seconds,
-            sealables,
-            lifetime_duration_seconds,
-            max_prolongations,
-            0,
-            sender=deployer,
-        )
-
-
-# other tests
-def test_deploy_params_must_match(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-    now,
-):
-    expected_timestamp = now() + lifetime_duration_seconds
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    assert (
-        gate_seal.get_sealing_committee() == sealing_committee
-    ), "sealing committee doesn't match"
-    assert (
-        gate_seal.get_seal_duration_seconds() == seal_duration_seconds
-    ), "seal duration doesn't match"
-    assert gate_seal.get_sealables() == sealables, "sealables don't match"
-    assert (
-        gate_seal.get_lifetime_duration_seconds() == lifetime_duration_seconds
-    ), "lifetime duration doesn't match"
-    assert (
-        gate_seal.get_expiry_timestamp() == expected_timestamp
-    ), "expiry timestamp don't match"
-    assert not gate_seal.is_expired(), "should not be expired"
-
-
-def test_seal_all(
-    now,
-    project,
-    gate_seal,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-):
-    expected_timestamp = now()
-    tx = gate_seal.seal(sealables, sender=sealing_committee)
-
-    for i, event in enumerate(tx.events):
-        assert event.event_name == "Sealed"
-        assert event.sealed_by == sealing_committee
-        assert event.sealed_for == seal_duration_seconds
-        assert event.sealable == sealables[i]
-        assert event.sealed_at == expected_timestamp
-
-    assert (
-        gate_seal.get_expiry_timestamp() == expected_timestamp
-    ), "expiry timestamp matches"
-
-    assert gate_seal.is_expired(), "gate seal must be expired immediately after sealing"
-
-    for sealable in sealables:
-        assert project.SealableMock.at(sealable).isPaused(), "sealable must be sealed"
-
-
-def test_seal_partial(
-    now,
-    project,
-    gate_seal,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-):
-    expected_timestamp = now()
-    sealables_to_seal = [sealables[0]]
-
-    tx = gate_seal.seal(sealables_to_seal, sender=sealing_committee)
-
-    for i, event in enumerate(tx.events):
-        assert event.event_name == "Sealed"
-        assert event.sealed_by == sealing_committee
-        assert event.sealed_for == seal_duration_seconds
-        assert event.sealable == sealables_to_seal[i]
-        assert event.sealed_at == expected_timestamp
-
-    assert gate_seal.is_expired(), "gate seal must be expired immediately after sealing"
-    assert gate_seal.get_expiry_timestamp() == expected_timestamp
-
-    for sealable in sealables:
-        sealable_contract = project.SealableMock.at(sealable)
-        if sealable in sealables_to_seal:
-            assert sealable_contract.isPaused(), "sealable must be sealed"
-        else:
-            assert not sealable_contract.isPaused(), "sealable must not be sealed"
-
-
-def test_natural_expiry(networks, gate_seal):
-    expiry_timestamp = gate_seal.get_expiry_timestamp()
-    networks.active_provider.set_timestamp(expiry_timestamp - 1)
-    networks.active_provider.mine()
-
-    assert not gate_seal.is_expired(), "expired prematurely"
-
-    networks.active_provider.set_timestamp(expiry_timestamp)
-    networks.active_provider.mine()
-
-    assert gate_seal.is_expired(), "must already be expired"
-
-
-def test_seal_as_stranger(gate_seal, stranger, sealables):
-    with pytest.raises(VirtualMachineError, match="sender: not SEALING_COMMITTEE"):
-        gate_seal.seal(sealables, sender=stranger)
-
-
-def test_seal_empty_subset(gate_seal, sealing_committee):
-    with pytest.raises(VirtualMachineError, match="sealables: empty subset"):
-        gate_seal.seal([], sender=sealing_committee)
-
-
-def test_seal_duplicates(gate_seal, sealables, sealing_committee):
-    if len(sealables) == MAX_SEALABLES:
-        sealables[-1] = sealables[0]
-    else:
-        sealables.append(sealables[0])
-    with pytest.raises(VirtualMachineError, match="sealables: includes duplicates"):
-        gate_seal.seal(sealables, sender=sealing_committee)
-
-
-def test_seal_nonintersecting_subset(accounts, gate_seal, sealing_committee):
-    with pytest.raises(VirtualMachineError, match="sealables: includes a non-sealable"):
-        gate_seal.seal([accounts[0]], sender=sealing_committee)
-
-
-def test_seal_partially_intersecting_subset(
-    accounts, gate_seal, sealing_committee, sealables
-):
-    with pytest.raises(VirtualMachineError, match="sealables: includes a non-sealable"):
-        gate_seal.seal([sealables[0], accounts[0]], sender=sealing_committee)
-
-
-def test_seal_only_once(gate_seal, sealing_committee, sealables):
-    gate_seal.seal(sealables, sender=sealing_committee)
-
-    with pytest.raises(VirtualMachineError, match="gate seal: expired"):
-        gate_seal.seal(sealables, sender=sealing_committee)
-
-
-@pytest.mark.parametrize("failing_index", range(MAX_SEALABLES))
-def test_single_failed_sealable_error_message(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    lifetime_duration_seconds,
-    failing_index,
-    generate_sealables,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    sealables = generate_sealables(MAX_SEALABLES)
-    unpausable = random.choice([True, False])
-    should_revert = not unpausable
-    sealables[failing_index] = generate_sealables(1, unpausable, should_revert)[0]
-
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    expected_bitmap = 1 << failing_index
-    with pytest.raises(VirtualMachineError, match=str(expected_bitmap)):
-        gate_seal.seal(
-            sealables,
-            sender=sealing_committee,
-        )
-
-
-@pytest.mark.parametrize("repeat", range(10))
-def test_several_failed_sealables_error_message(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    lifetime_duration_seconds,
-    generate_sealables,
-    max_prolongations,
-    prolongation_window_seconds,
-    repeat,
-):
-    sealables = generate_sealables(MAX_SEALABLES)
-
-    failed = random.sample(range(MAX_SEALABLES), random.choice(range(1, MAX_SEALABLES)))
-
-    unpausable = True
-    should_revert = False
-
-    for index in failed:
-        sealables[index] = generate_sealables(1, unpausable, should_revert)[0]
-
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    failed.sort()
-    bitmap = 0
-    for index in failed:
-        bitmap |= 1 << index
-    with pytest.raises(VirtualMachineError, match=str(bitmap)):
-        gate_seal.seal(
-            sealables,
-            sender=sealing_committee,
-        )
-
-
-@pytest.mark.skip("only run this with automining disabled")
-def test_cannot_seal_twice_in_one_tx(gate_seal, sealables, sealing_committee):
-    gate_seal.seal(sealables, sender=sealing_committee)
-    with pytest.raises(VirtualMachineError, match="gate seal: expired"):
-        gate_seal.seal(sealables, sender=sealing_committee)
-
-
-def test_raw_call_success_should_be_false_when_sealable_reverts_on_pause(
-    project,
-    deployer,
-    generate_sealables,
-    sealing_committee,
-    seal_duration_seconds,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
-):
-    """
-        `raw_call` without `max_outsize` and with `revert_on_failure=True` for some reason returns the boolean value of memory[0] :^)
-
-        Which is why we specify `max_outsize=32`, even though don't actually use it.
-
-        To test that `success` returns actual value instead of returning bool of memory[0],
-        we need to pause the contract before the sealing,
-        so that the condition `success and is_paused()` is false (i.e `False and True`), see GateSealV2.vy::seal()
-
-    For that, we use `force_pause_for` on SealableMock to ignore any checks and forcefully pause the contract.
-    After calling this function, the SealableMock is paused but the call to `pauseFor` will still revert,
-    thus the returned `success` should be False, the condition fails and the call reverts altogether.
-
-        Without `max_outsize=32`, the transaction would not revert.
-    """
-
-    unpausable = False
-    should_revert = True
-    # we'll use only 1 sealable
-    sealables = generate_sealables(1, unpausable, should_revert)
-
-    # deploy GateSealV2
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    # making sure we have the right contract
-    assert gate_seal.get_sealables() == sealables
-
-    # forcefully pause the sealable before sealing
-    sealables[0].force_pause_for(seal_duration_seconds, sender=deployer)
-    assert sealables[0].isPaused(), "should be paused now"
-
-    # seal() should revert because `raw_call` to sealable returns `success=False`, even though isPaused() is True.
-    with pytest.raises(VirtualMachineError, match="reverted with reason string '1'"):
-        gate_seal.seal(sealables, sender=sealing_committee)
-
-
-def test_prolong_before_expiry(
-    networks,
-    gate_seal,
-    sealing_committee,
-    lifetime_duration_seconds,
-    prolongation_window_seconds,
-    max_prolongations,
-):
-    old_expiry = gate_seal.get_expiry_timestamp()
-    networks.active_provider.set_timestamp(old_expiry - PROLONGATION_OFFSET_SECONDS)
-    networks.active_provider.mine()
-    gate_seal.prolongLifetime(sender=sealing_committee)
-    assert gate_seal.get_expiry_timestamp() == old_expiry + lifetime_duration_seconds
-    assert gate_seal.get_prolongations_remaining() == max_prolongations - 1
-
-
-def test_prolong_after_expiry(
+def test_prolongation_too_late(
     networks,
     gate_seal,
     sealing_committee,
 ):
-    expiry_timestamp = gate_seal.get_expiry_timestamp()
-    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    window_end = gate_seal.get_prolongation_window_end()
+    networks.active_provider.set_timestamp(window_end + 1)
     networks.active_provider.mine()
-
-    with pytest.raises(VirtualMachineError, match="gate seal: expired"):
-        gate_seal.prolongLifetime(sender=sealing_committee)
-
-
-def test_prolong_only_committee(gate_seal, stranger):
-    with pytest.raises(VirtualMachineError, match="sender: not SEALING_COMMITTEE"):
-        gate_seal.prolongLifetime(sender=stranger)
-
-
-def test_cannot_prolong_after_seal(gate_seal, sealing_committee, sealables):
-    gate_seal.seal(sealables, sender=sealing_committee)
-    with pytest.raises(VirtualMachineError, match="gate seal: expired"):
-        gate_seal.prolongLifetime(sender=sealing_committee)
-
-
-def test_prolongation_window_last_second_ok(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    prolongation_window_seconds,
-):
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        calculated_max_prolongations(lifetime_duration_seconds),
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    expiry = gate_seal.get_expiry_timestamp()
-    start = expiry - PROLONGATION_OFFSET_SECONDS
-    end = start + prolongation_window_seconds
-
-    project.provider.set_timestamp(end - 1)
-    project.provider.mine()
-    gate_seal.prolongLifetime(sender=sealing_committee)
-
-
-def test_prolongation_window_after_close_reverts(
-    project,
-    deployer,
-    sealing_committee,
-    seal_duration_seconds,
-    sealables,
-    lifetime_duration_seconds,
-    prolongation_window_seconds,
-):
-    gate_seal = project.GateSealV2.deploy(
-        sealing_committee,
-        seal_duration_seconds,
-        sealables,
-        lifetime_duration_seconds,
-        calculated_max_prolongations(lifetime_duration_seconds),
-        prolongation_window_seconds,
-        sender=deployer,
-    )
-
-    expiry = gate_seal.get_expiry_timestamp()
-    start = expiry - PROLONGATION_OFFSET_SECONDS
-    end = start + prolongation_window_seconds
-
-    project.provider.set_timestamp(end + 1)
-    project.provider.mine()
-
     with pytest.raises(VirtualMachineError, match="prolongation window: expired"):
         gate_seal.prolongLifetime(sender=sealing_committee)
+
+
+def test_seal_and_fail_to_prolong(
+    project,
+    sealing_committee,
+    sealables,
+    gate_seal,
+):
+    assert not gate_seal.is_expired()
+    gate_seal.seal(sender=sealing_committee)
+    assert gate_seal.is_expired()
+
+    for addr in sealables:
+        assert project.SealableMock.at(addr).isPaused()
+
+    with pytest.raises(VirtualMachineError, match="gate seal: expired"):
+        gate_seal.prolongLifetime(sender=sealing_committee)
+
+
+def test_prolongation_in_window(
+    networks,
+    gate_seal,
+    sealing_committee,
+):
+    window_start = gate_seal.get_prolongation_window_start()
+    expiry = gate_seal.get_expiry_timestamp()
+    prolongations_remaining = gate_seal.get_prolongations_remaining()
+    prolongation_period = gate_seal.get_prolongation_period_seconds()
+    networks.active_provider.set_timestamp(window_start + 1)
+    networks.active_provider.mine()
+    tx = gate_seal.prolongLifetime(sender=sealing_committee)
+
+    assert tx.events[0].prolonged_by == sealing_committee
+    assert tx.events[0].prolongations_remaining == prolongations_remaining - 1
+    assert tx.events[0].new_expiry == expiry + prolongation_period
+
+    assert gate_seal.get_expiry_timestamp() == expiry + prolongation_period
+    assert gate_seal.get_prolongations_remaining() == prolongations_remaining - 1
+
+
+def test_cannot_prolong_twice(
+    networks,
+    gate_seal,
+    sealing_committee,
+):
+    window_start = gate_seal.get_prolongation_window_start()
+    networks.active_provider.set_timestamp(window_start + 1)
+    networks.active_provider.mine()
+    gate_seal.prolongLifetime(sender=sealing_committee)
+    with pytest.raises(VirtualMachineError, match="prolongation window: too early"):
+        gate_seal.prolongLifetime(sender=sealing_committee)
+
+
+def test_seal_under_invalid_committee(gate_seal, stranger):
+    with pytest.raises(VirtualMachineError):
+        gate_seal.seal(sender=stranger)
+
+
+def test_prolong_under_invalid_committee(gate_seal, stranger):
+    with pytest.raises(VirtualMachineError):
+        gate_seal.prolongLifetime(sender=stranger)

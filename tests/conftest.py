@@ -2,13 +2,11 @@ import pytest
 from random import randint
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import (
-    MIN_LIFETIME_DURATION_SECONDS,
-    MIN_PROLONGATION_WINDOW_SECONDS,
-    MIN_SEAL_DURATION_SECONDS,
+    MAX_INITIAL_LIFETIME_SECONDS,
     MAX_SEALABLES,
     MIN_SEALABLES,
+    SECONDS_PER_DAY,
 )
-from utils.helpers import calculated_max_prolongations
 
 """
 
@@ -59,17 +57,15 @@ def gate_seal(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    lifetime_duration_seconds,
-    max_prolongations,
-    prolongation_window_seconds,
+    initial_lifetime_seconds,
+    prolongations,
 ):
     transaction = gate_seal_factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        lifetime_duration_seconds,
-        max_prolongations,
-        prolongation_window_seconds,
+        initial_lifetime_seconds,
+        prolongations,
         sender=deployer,
     )
 
@@ -92,32 +88,22 @@ def sealables(generate_sealables):
 
 @pytest.fixture(scope="session")
 def seal_duration_seconds():
-    return MIN_SEAL_DURATION_SECONDS
+    return SECONDS_PER_DAY * 11
 
 
 @pytest.fixture(scope="session")
-def lifetime_duration_seconds():
-    return MIN_LIFETIME_DURATION_SECONDS
+def initial_lifetime_seconds():
+    return MAX_INITIAL_LIFETIME_SECONDS
 
 
 @pytest.fixture(scope="session")
-def max_prolongations(lifetime_duration_seconds):
-    return calculated_max_prolongations(lifetime_duration_seconds)
-
-
-@pytest.fixture(scope="session")
-def prolongation_window_seconds(day):
-    return MIN_PROLONGATION_WINDOW_SECONDS
+def prolongations():
+    return 3
 
 
 @pytest.fixture(scope="function")
 def now(chain):
     return lambda: chain.pending_timestamp
-
-
-@pytest.fixture(scope="session")
-def day():
-    return 60 * 60 * 24
 
 
 """
@@ -133,3 +119,57 @@ def generate_sealables(project, deployer):
         project.SealableMock.deploy(unpausable, reverts, sender=deployer)
         for _ in range(n)
     ]
+
+
+@pytest.fixture(scope="function")
+def deploy_gate_seal(
+    project,
+    deployer,
+    gate_seal_factory,
+    sealing_committee,
+    seal_duration_seconds,
+    sealables,
+    initial_lifetime_seconds,
+    prolongations,
+):
+    def _deploy_gate_seal(
+        sealing_committee_=None,
+        seal_duration_seconds_=None,
+        sealables_=None,
+        initial_lifetime_seconds_=None,
+        prolongations_=None,
+        sender=None,
+    ):
+        # Use defaults if not overridden
+        final_committee = (
+            sealing_committee_ if sealing_committee_ is not None else sealing_committee
+        )
+        final_seal_duration = (
+            seal_duration_seconds_
+            if seal_duration_seconds_ is not None
+            else seal_duration_seconds
+        )
+        final_sealables = sealables_ if sealables_ is not None else sealables
+        final_initial_lifetime = (
+            initial_lifetime_seconds_
+            if initial_lifetime_seconds_ is not None
+            else initial_lifetime_seconds
+        )
+        final_prolongations = (
+            prolongations_ if prolongations_ is not None else prolongations
+        )
+        final_sender = sender if sender is not None else deployer
+
+        transaction = gate_seal_factory.create_gate_seal(
+            final_committee,
+            final_seal_duration,
+            final_sealables,
+            final_initial_lifetime,
+            final_prolongations,
+            sender=final_sender,
+        )
+
+        gate_seal_address = transaction.events[0].gate_seal
+        return project.GateSealV2.at(gate_seal_address)
+
+    return _deploy_gate_seal
