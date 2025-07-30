@@ -25,7 +25,6 @@
 event Sealed:
     sealed_by: address
     sealed_for: uint256
-    sealable: address
 
 event Prolonged:
     prolonged_by: address
@@ -262,7 +261,6 @@ def seal():
             log Sealed(
                 sealed_by=SEALING_COMMITTEE,
                 sealed_for=SEAL_DURATION_SECONDS,
-                sealable=sealable,
             )
         else:
             failed_indexes.append(sealable_index)
