@@ -117,7 +117,6 @@ def __init__(
     assert len(_sealables) > 0, "sealables: empty list"
     assert _initial_lifetime_seconds >= MIN_INITIAL_LIFETIME_SECONDS, "initial lifetime: too short"
     assert _initial_lifetime_seconds <= MAX_INITIAL_LIFETIME_SECONDS, "initial lifetime: exceeds max"
-    assert _prolongations >= 0, "max prolongations: must be non-negative"
     assert _initial_lifetime_seconds + PROLONGATION_PERIOD_SECONDS * _prolongations <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
     assert _seal_duration_seconds > 0, "seal duration: must be positive"
     
