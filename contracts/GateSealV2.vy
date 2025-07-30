@@ -23,11 +23,9 @@
 
 
 event Sealed:
-    gate_seal: address
     sealed_by: address
     sealed_for: uint256
     sealable: address
-    sealed_at: uint256
 
 event Prolonged:
     prolonged_by: address
@@ -262,11 +260,9 @@ def seal():
         
         if success and staticcall IPausableUntil(sealable).isPaused():
             log Sealed(
-                gate_seal=self,
                 sealed_by=SEALING_COMMITTEE,
                 sealed_for=SEAL_DURATION_SECONDS,
                 sealable=sealable,
-                sealed_at=block.timestamp
             )
         else:
             failed_indexes.append(sealable_index)

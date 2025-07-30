@@ -87,7 +87,10 @@ def test_seal_and_fail_to_prolong(
     gate_seal,
 ):
     assert not gate_seal.is_expired()
-    gate_seal.seal(sender=sealing_committee)
+    tx = gate_seal.seal(sender=sealing_committee)
+    assert tx.events[0].sealed_by == sealing_committee
+    assert tx.events[0].sealed_for == gate_seal.get_seal_duration_seconds()
+    assert tx.events[0].sealable == sealables[0]
     assert gate_seal.is_expired()
 
     for addr in sealables:
