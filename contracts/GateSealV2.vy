@@ -2,7 +2,7 @@
 
 """
 @title GateSealV2
-@author mymphe
+@author alex.k@lido.fi
 @notice A one-time panic button for pausable contracts
 @dev GateSeal is an one-time immediate emergency pause for pausable contracts.
      It must be operated by a multisig committee, though the code does not

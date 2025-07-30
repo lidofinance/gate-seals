@@ -2,7 +2,7 @@
 
 """
 @title GateSealFactoryV2
-@author mymphe
+@author alex.k@lido.fi
 @notice A factory contract for GateSeals
 @dev This contract is meant to simplify the GateSeal deploy.
      The factory features a single write function that deploys
