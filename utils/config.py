@@ -1,5 +1,4 @@
 from ape import chain, accounts, api
-from ape.logging import logger
 from utils.constants import GOERLI_ID, MAINNET_ID, HOLESKY_ID, HOODI_ID
 from utils.env import load_env_variable
 

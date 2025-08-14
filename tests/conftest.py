@@ -2,11 +2,16 @@ import pytest
 from random import randint
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import (
-    MAX_INITIAL_LIFETIME_SECONDS,
     MAX_SEALABLES,
     MIN_SEALABLES,
     SECONDS_PER_DAY,
 )
+
+# Default parameters for contracts under test
+PROLONGATION_PERIOD_SECONDS = SECONDS_PER_DAY * 365
+PROLONGATION_WINDOW_SECONDS = SECONDS_PER_DAY * 14
+DAO_OPS_RESERVE_SECONDS = SECONDS_PER_DAY * 60
+MIN_EXPIRY_OFFSET_SECONDS = PROLONGATION_WINDOW_SECONDS + DAO_OPS_RESERVE_SECONDS
 
 """
 
@@ -46,7 +51,10 @@ def blueprint_address(project, deployer):
 
 @pytest.fixture(scope="function")
 def gate_seal_factory(project, deployer, blueprint_address):
-    return project.GateSealFactoryV2.deploy(blueprint_address, sender=deployer)
+    return project.GateSealFactoryV2.deploy(
+        blueprint_address,
+        sender=deployer,
+    )
 
 
 @pytest.fixture(scope="function")
@@ -57,15 +65,20 @@ def gate_seal(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    initial_lifetime_seconds,
-    prolongations,
+    get_expiry_timestamp,
+    prolongation_limit,
+    now,
 ):
+    expiry_timestamp = get_expiry_timestamp()
     transaction = gate_seal_factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        initial_lifetime_seconds,
-        prolongations,
+        expiry_timestamp,
+        prolongation_limit,
+        PROLONGATION_PERIOD_SECONDS,
+        PROLONGATION_WINDOW_SECONDS,
+        DAO_OPS_RESERVE_SECONDS,
         sender=deployer,
     )
 
@@ -91,14 +104,17 @@ def seal_duration_seconds():
     return SECONDS_PER_DAY * 11
 
 
-@pytest.fixture(scope="session")
-def initial_lifetime_seconds():
-    return MAX_INITIAL_LIFETIME_SECONDS
+DEFAULT_EXPIRY_OFFSET_SECONDS = MIN_EXPIRY_OFFSET_SECONDS + SECONDS_PER_DAY
+
+
+@pytest.fixture(scope="function")
+def get_expiry_timestamp(now):
+    return lambda: now() + DEFAULT_EXPIRY_OFFSET_SECONDS
 
 
 @pytest.fixture(scope="session")
-def prolongations():
-    return 3
+def prolongation_limit():
+    return 1
 
 
 @pytest.fixture(scope="function")
@@ -122,6 +138,26 @@ def generate_sealables(project, deployer):
 
 
 @pytest.fixture(scope="function")
+def normal_sealable(project, deployer):
+    return project.SealableMock.deploy(False, False, sender=deployer)
+
+
+@pytest.fixture(scope="function")
+def sealable_with_broken_pause(project, deployer):
+    return project.SealableMock.deploy(True, False, sender=deployer)
+
+
+@pytest.fixture(scope="function")
+def reverting_sealable(project, deployer):
+    return project.SealableMock.deploy(False, True, sender=deployer)
+
+
+@pytest.fixture(scope="function")
+def sealable_without_interface(project, deployer):
+    return project.SealableWithoutInterface.deploy(sender=deployer)
+
+
+@pytest.fixture(scope="function")
 def deploy_gate_seal(
     project,
     deployer,
@@ -129,15 +165,19 @@ def deploy_gate_seal(
     sealing_committee,
     seal_duration_seconds,
     sealables,
-    initial_lifetime_seconds,
-    prolongations,
+    get_expiry_timestamp,
+    prolongation_limit,
+    now,
 ):
     def _deploy_gate_seal(
         sealing_committee_=None,
         seal_duration_seconds_=None,
         sealables_=None,
-        initial_lifetime_seconds_=None,
-        prolongations_=None,
+        expiry_timestamp_=None,
+        prolongation_limit_=None,
+        prolongation_period_seconds_=None,
+        prolongation_window_seconds_=None,
+        dao_ops_reserve_seconds_=None,
         sender=None,
     ):
         # Use defaults if not overridden
@@ -150,13 +190,30 @@ def deploy_gate_seal(
             else seal_duration_seconds
         )
         final_sealables = sealables_ if sealables_ is not None else sealables
-        final_initial_lifetime = (
-            initial_lifetime_seconds_
-            if initial_lifetime_seconds_ is not None
-            else initial_lifetime_seconds
+        final_expiry = (
+            expiry_timestamp_
+            if expiry_timestamp_ is not None
+            else get_expiry_timestamp()
         )
-        final_prolongations = (
-            prolongations_ if prolongations_ is not None else prolongations
+        final_prolongation_limit = (
+            prolongation_limit_
+            if prolongation_limit_ is not None
+            else prolongation_limit
+        )
+        final_prolongation_period = (
+            prolongation_period_seconds_
+            if prolongation_period_seconds_ is not None
+            else PROLONGATION_PERIOD_SECONDS
+        )
+        final_prolongation_window = (
+            prolongation_window_seconds_
+            if prolongation_window_seconds_ is not None
+            else PROLONGATION_WINDOW_SECONDS
+        )
+        final_dao_ops_reserve = (
+            dao_ops_reserve_seconds_
+            if dao_ops_reserve_seconds_ is not None
+            else DAO_OPS_RESERVE_SECONDS
         )
         final_sender = sender if sender is not None else deployer
 
@@ -164,8 +221,11 @@ def deploy_gate_seal(
             final_committee,
             final_seal_duration,
             final_sealables,
-            final_initial_lifetime,
-            final_prolongations,
+            final_expiry,
+            final_prolongation_limit,
+            final_prolongation_period,
+            final_prolongation_window,
+            final_dao_ops_reserve,
             sender=final_sender,
         )
 

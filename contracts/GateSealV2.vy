@@ -25,6 +25,7 @@
 event Sealed:
     sealed_by: address
     sealed_for: uint256
+    sealable: address
 
 event Prolonged:
     prolonged_by: address
@@ -46,25 +47,16 @@ SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 MAX_SEALABLES: constant(uint256) = 8
 
 # === PROLONGATION SYSTEM ===
-# Each prolongation extends the GateSeal by exactly one year.
-PROLONGATION_PERIOD_DAYS: constant(uint256) = 365
-PROLONGATION_PERIOD_SECONDS: constant(uint256) = SECONDS_PER_DAY * PROLONGATION_PERIOD_DAYS
+# Each prolongation extends the GateSeal by the provided period.
+PROLONGATION_PERIOD_SECONDS: immutable(uint256)
 
-# Timeline: Now → [PROLONGATION_WINDOW] → [DAO_RESERVE] → Expiry
+# Timeline: Now → [PROLONGATION_WINDOW] → [DAO_OPS_RESERVE] → Expiry
 # PROLONGATION_WINDOW is the period during which the committee can prolong
-PROLONGATION_WINDOW_DAYS: constant(uint256) = 14
-PROLONGATION_WINDOW_SECONDS: constant(uint256) = SECONDS_PER_DAY * PROLONGATION_WINDOW_DAYS
+PROLONGATION_WINDOW_SECONDS: immutable(uint256)
 
-# DAO_RESERVE ensures the DAO can deploy a new GateSeal if prolongation fails
-DAO_RESERVE_DAYS: constant(uint256) = 60
-DAO_RESERVE_SECONDS: constant(uint256) = SECONDS_PER_DAY * DAO_RESERVE_DAYS
+# DAO_OPS_RESERVE ensures the DAO can deploy a new GateSeal if prolongation fails
+DAO_OPS_RESERVE_SECONDS: immutable(uint256)
 
-# === LIFETIME LIMITS ===
-# Initial lifetime must be at least DAO_RESERVE + prolongation window
-MIN_INITIAL_LIFETIME_SECONDS: constant(uint256) = DAO_RESERVE_SECONDS + PROLONGATION_WINDOW_SECONDS
-
-# Initial lifetime cannot exceed two prolongation periods
-MAX_INITIAL_LIFETIME_SECONDS: constant(uint256) = PROLONGATION_PERIOD_SECONDS * 2
 
 # Total lifetime across all prolongations is capped at five years
 TOTAL_LIFETIME_DAYS: constant(uint256) = 365 * 5
@@ -84,22 +76,19 @@ SEALING_COMMITTEE: immutable(address)
 # prematurely via the regular governance process if needed.
 SEAL_DURATION_SECONDS: immutable(uint256)
 
-# The sealing committee extends the GateSeal to attest that the multisig is still active.
 
-# The time window before expiry during which prolongation is allowed.
-# The initial lifetime in seconds, set at deployment to align the first
-# expiration with the chosen prolongation window.
-INITIAL_LIFETIME_SECONDS: immutable(uint256)
-
-# The addresses of pausable contracts. The gate seal must have the permission to
+# The addresses of pausable contracts. The GateSeal must have the permission to
 # pause these contracts at the time of the sealing.
-# Sealing can be partial, meaning the committee may decide to pause only a subset of this list,
-# though GateSeal will still expire immediately.
+# All contracts in this list will be paused when seal() is called.
+# The set of sealables is predefined at deployment time and cannot be changed.
 sealables: DynArray[address, MAX_SEALABLES]
 
-# A unix epoch timestamp starting from which GateSeal is completely unusable
-# and a new GateSeal will have to be set up. This timestamp will be changed
-# upon sealing to expire GateSeal immediately which will revert any consecutive sealings.
+# Absolute unix timestamp when the current GateSeal lifetime ends unless it is prolonged.
+# Before sealing, this value determines the prolongation window bounds
+# (see get_prolongation_window_start/end) and the moment when the GateSeal expires.
+# Each successful prolongation increases this value by PROLONGATION_PERIOD_SECONDS.
+# On sealing, this value is set to the current block timestamp to expire the GateSeal
+# immediately and prevent any further operations. After expiry, a new GateSeal must be set up.
 expiry_timestamp: uint256
 
 # The number of prolongations remaining.
@@ -110,26 +99,40 @@ def __init__(
     _sealing_committee: address,
     _seal_duration_seconds: uint256,
     _sealables: DynArray[address, MAX_SEALABLES],
-    _initial_lifetime_seconds: uint256,
-    _prolongations: uint256
+    _expiry_timestamp: uint256,
+    _prolongation_limit: uint256,
+    _prolongation_period_seconds: uint256,
+    _prolongation_window_seconds: uint256,
+    _dao_ops_reserve_seconds: uint256,
 ):
     assert _sealing_committee != empty(address), "sealing committee: zero address"
     assert len(_sealables) > 0, "sealables: empty list"
-    assert _initial_lifetime_seconds >= MIN_INITIAL_LIFETIME_SECONDS, "initial lifetime: too short"
-    assert _initial_lifetime_seconds <= MAX_INITIAL_LIFETIME_SECONDS, "initial lifetime: exceeds max"
-    assert _initial_lifetime_seconds + PROLONGATION_PERIOD_SECONDS * _prolongations <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
+
+    min_prolongation_period_seconds: uint256 = _prolongation_window_seconds + _dao_ops_reserve_seconds
+    max_lifetime_seconds: uint256 = _prolongation_period_seconds * 2
+
+    assert _prolongation_period_seconds >= min_prolongation_period_seconds, "prolongation period: below minimum"
+    
+    PROLONGATION_PERIOD_SECONDS = _prolongation_period_seconds
+    PROLONGATION_WINDOW_SECONDS = _prolongation_window_seconds
+    DAO_OPS_RESERVE_SECONDS = _dao_ops_reserve_seconds
+    assert _expiry_timestamp >= block.timestamp, "expiry timestamp: must be in the future"
+    lifetime_seconds: uint256 = _expiry_timestamp - block.timestamp
+    assert lifetime_seconds >= min_prolongation_period_seconds, "expiry timestamp: below minimum"
+    assert lifetime_seconds <= max_lifetime_seconds, "expiry timestamp: exceeds max"
+    assert lifetime_seconds + PROLONGATION_PERIOD_SECONDS * _prolongation_limit <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
     assert _seal_duration_seconds > 0, "seal duration: must be positive"
     
     for sealable: address in _sealables:
         assert sealable != empty(address), "sealables: includes zero address"
+        self._validate_sealable_interface(sealable)
     assert not self._has_duplicates(_sealables), "sealables: includes duplicates"
 
     SEALING_COMMITTEE = _sealing_committee
     SEAL_DURATION_SECONDS = _seal_duration_seconds
-    INITIAL_LIFETIME_SECONDS = _initial_lifetime_seconds
     self.sealables = _sealables
-    self.expiry_timestamp = block.timestamp + _initial_lifetime_seconds
-    self.prolongations_remaining = _prolongations
+    self.expiry_timestamp = _expiry_timestamp
+    self.prolongations_remaining = _prolongation_limit
 
 
 @external
@@ -150,11 +153,6 @@ def get_sealables() -> DynArray[address, MAX_SEALABLES]:
     return self.sealables
 
 
-@external
-@view
-def get_initial_lifetime_seconds() -> uint256:
-    return INITIAL_LIFETIME_SECONDS
-
 
 @external
 @view
@@ -166,6 +164,12 @@ def get_prolongation_period_seconds() -> uint256:
 @view
 def get_prolongation_window_seconds() -> uint256:
     return PROLONGATION_WINDOW_SECONDS
+
+
+@external
+@view
+def get_dao_ops_reserve_seconds() -> uint256:
+    return DAO_OPS_RESERVE_SECONDS
 
 
 @external
@@ -207,13 +211,13 @@ def is_expired() -> bool:
 
 
 @external
-def prolongLifetime():
+def prolong_lifetime():
     """
     @notice Prolong the GateSeal.
     @dev    Can be called only by the sealing committee while the seal hasn't been used and not expired.
     """
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
-    assert not self._is_expired(), "gate seal: expired"
+    assert not self._is_expired(), "GateSeal: expired"
     assert self.prolongations_remaining > 0, "prolongations: exhausted"
     start: uint256 = self._get_prolongation_window_start()
     end: uint256 = self._get_prolongation_window_end()
@@ -237,7 +241,7 @@ def seal():
     @dev Seals all predefined sealables.
     """
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
-    assert not self._is_expired(), "gate seal: expired"
+    assert not self._is_expired(), "GateSeal: expired"
 
     self._expire_immediately()
 
@@ -260,6 +264,7 @@ def seal():
             log Sealed(
                 sealed_by=SEALING_COMMITTEE,
                 sealed_for=SEAL_DURATION_SECONDS,
+                sealable=sealable,
             )
         else:
             failed_indexes.append(sealable_index)
@@ -282,13 +287,33 @@ def _expire_immediately():
 @internal
 @view
 def _get_prolongation_window_start() -> uint256:
-    return self.expiry_timestamp - DAO_RESERVE_SECONDS - PROLONGATION_WINDOW_SECONDS
+    if self._is_expired():
+        return 0
+    
+    return self.expiry_timestamp - DAO_OPS_RESERVE_SECONDS - PROLONGATION_WINDOW_SECONDS
 
 
 @internal
 @view
 def _get_prolongation_window_end() -> uint256:
-    return self.expiry_timestamp - DAO_RESERVE_SECONDS
+    if self._is_expired():
+        return 0
+        
+    return self.expiry_timestamp - DAO_OPS_RESERVE_SECONDS
+
+
+@internal
+def _validate_sealable_interface(_sealable: address):
+    assert _sealable.codesize > 0, "sealable: not a contract"
+    
+    success: bool = raw_call(
+        _sealable,
+        method_id("isPaused()"),
+        revert_on_failure=False
+    )
+    
+    assert success, "sealable: does not implement IPausableUntil interface"
+
 
 
 @internal

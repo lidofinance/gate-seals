@@ -8,7 +8,6 @@ from eth_utils.address import to_checksum_address
 from utils.config import get_deployer
 from utils.env import load_env_variable
 from utils.helpers import construct_deployed_filename
-from utils.constants import PROLONGATION_PERIOD_SECONDS
 
 
 def main():
@@ -19,21 +18,25 @@ def main():
     sealing_committee = load_env_variable("SEALING_COMMITTEE")
     seal_duration_seconds = int(load_env_variable("SEAL_DURATION_SECONDS"))
     sealables = load_env_variable("SEALABLES").split(",")
-    initial_lifetime_seconds = int(load_env_variable("INITIAL_LIFETIME_SECONDS"))
-    prolongations = int(load_env_variable("PROLONGATIONS"))
-
-    logger.info(
-        f"Deploying GateSeal with {prolongations} prolongations (initial: {initial_lifetime_seconds // (60*60*24)} days → total: {(initial_lifetime_seconds + prolongations * PROLONGATION_PERIOD_SECONDS) // (60*60*24)} days)"
-    )
+    expiry_timestamp = int(load_env_variable("EXPIRY_TIMESTAMP"))
+    prolongation_limit = int(load_env_variable("PROLONGATION_LIMIT"))
+    prolongation_period_seconds = int(load_env_variable("PROLONGATION_PERIOD_SECONDS"))
+    prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
+    dao_ops_reserve_seconds = int(load_env_variable("DAO_OPS_RESERVE_SECONDS"))
 
     factory = project.GateSealFactoryV2.at(to_checksum_address(factory_address))
+
+    logger.info(f"Deploying GateSeal with {prolongation_limit} prolongations")
 
     transaction = factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        initial_lifetime_seconds,
-        prolongations,
+        expiry_timestamp,
+        prolongation_limit,
+        prolongation_period_seconds,
+        prolongation_window_seconds,
+        dao_ops_reserve_seconds,
         sender=deployer,
         max_priority_fee="5 gwei",
     )
@@ -56,8 +59,11 @@ def main():
                         "sealing_committee": sealing_committee,
                         "seal_duration_seconds": seal_duration_seconds,
                         "sealables": sealables,
-                        "initial_lifetime_seconds": initial_lifetime_seconds,
-                        "prolongations": prolongations,
+                        "expiry_timestamp": expiry_timestamp,
+                        "prolongation_limit": prolongation_limit,
+                        "prolongation_period_seconds": prolongation_period_seconds,
+                        "prolongation_window_seconds": prolongation_window_seconds,
+                        "dao_ops_reserve_seconds": dao_ops_reserve_seconds,
                     },
                 }
             )

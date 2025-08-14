@@ -2,9 +2,6 @@ import json
 from ape import project, accounts, chain, networks
 from ape.logging import logger
 from eth_utils.address import to_checksum_address
-from utils.constants import (
-    MAX_INITIAL_LIFETIME_SECONDS,
-)
 from utils.env import load_env_variable
 from utils.helpers import construct_deployed_filename
 
@@ -35,43 +32,46 @@ def main():
     sealing_committee = deployer
     seal_duration_seconds = 60 * 60 * 24 * 7  # week
     sealables = [sealable.address]
-    lifetime_duration_seconds = MAX_INITIAL_LIFETIME_SECONDS
-    expiry_timestamp = chain.pending_timestamp + lifetime_duration_seconds
-    prolongations = 3
+    prolongation_period_seconds = int(load_env_variable("PROLONGATION_PERIOD_SECONDS"))
+    prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
+    dao_ops_reserve_seconds = int(load_env_variable("DAO_OPS_RESERVE_SECONDS"))
+    expiry_timestamp = chain.pending_timestamp + prolongation_period_seconds
+    prolongation_limit = 3
 
-    logger.info("Creating GateSeal...")
     tx = factory.create_gate_seal(
         sealing_committee,
         seal_duration_seconds,
         sealables,
-        lifetime_duration_seconds,
-        prolongations,
+        expiry_timestamp,
+        prolongation_limit,
+        prolongation_period_seconds,
+        prolongation_window_seconds,
+        dao_ops_reserve_seconds,
         sender=deployer,
     )
-    logger.info("GateSeal deployed!")
+    logger.success("GateSeal deployed!")
 
     gate_seal_address = tx.events[0].gate_seal
-
     gate_seal = project.GateSealV2.at(gate_seal_address)
 
-    logger.info("Checking getters...")
     assert gate_seal.get_sealing_committee() == sealing_committee
-    logger.success("Sealing committee matches")
     assert gate_seal.get_seal_duration_seconds() == seal_duration_seconds
-    logger.success("Seal duration matches")
     assert gate_seal.get_sealables() == sealables
-    logger.success("Sealables match")
-    assert gate_seal.get_initial_lifetime_seconds() == lifetime_duration_seconds
-    logger.success("Initial lifetime matches")
-    assert gate_seal.get_prolongations_remaining() == prolongations
-    logger.success("Prolongations remaining matches")
     assert gate_seal.get_expiry_timestamp() == expiry_timestamp
     logger.success("Expiry timestamp matches")
+    assert gate_seal.get_prolongations_remaining() == prolongation_limit
+    logger.success("Prolongations remaining matches")
+    assert gate_seal.get_prolongation_period_seconds() == prolongation_period_seconds
+    logger.success("Prolongation period matches")
+    assert gate_seal.get_prolongation_window_seconds() == prolongation_window_seconds
+    logger.success("Prolongation window matches")
+    assert gate_seal.get_dao_ops_reserve_seconds() == dao_ops_reserve_seconds
+    logger.success("DAO ops reserve matches")
 
     logger.info("Sealing...")
     assert not sealable.isPaused()
 
-    seal_tx = gate_seal.seal(sealables, sender=deployer)
+    seal_tx = gate_seal.seal(sender=deployer)
     logger.success("Sealed")
 
     assert gate_seal.is_expired()
@@ -82,8 +82,6 @@ def main():
     logger.success("Expiry timestamp updated")
     assert sealable.isPaused()
     logger.success("Sealable paused")
-
-    seal_timestamp = networks.active_provider.get_block(seal_tx.block_number).timestamp
 
     logger.info("Fast-forwarding time to the timestamp just before unpause...")
     networks.active_provider.set_timestamp(seal_timestamp + seal_duration_seconds - 1)

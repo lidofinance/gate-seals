@@ -29,3 +29,4 @@ def pauseFor(_duration: uint256):
     assert not self.reverts, "simulating revert"
     if not self.unpausable:
         self.resumed_timestamp = block.timestamp + _duration
+        

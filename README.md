@@ -14,16 +14,10 @@ A GateSeal is a contract that allows the designated account to instantly put a s
 To put such crucial components of the Lido protocol as `WithdrawalQueue` and `ValidatorExitBus` on hold, the DAO must hold a vote which may take up to several days to pass. GateSeals provide a way to temporarily pause these contracts immediately if the emergency calls for a swifter response. This will give the Lido DAO the time to come up with a solution, hold a vote, implement changes, etc.
 
 Each GateSeal is operated by a committee, essentially a multisig account responsible for pulling the brake in case things go awry. However, authorizing a committee to pause/resume the protocol withdrawals would be utterly reckless which is why GateSeals have a number of safeguards in place:
-- each GateSeal can only be activated only once and becomes unusable immediately after,
-- the prolongation period is fixed at one year and may be repeated by the committee,
-- at deployment the DAO chooses how many prolongations are available,
-- the total lifetime of a GateSeal cannot exceed 5 years,
-- the committee must prolong within a 14‑day window that starts 74 days before expiry (60-day DAO reserve plus window),
-- only the sealing committee may prolong the lifetime, provided that:
-  - the GateSeal has not been triggered
-  - prolongations remain
-  - the GateSeal has not expired
-  - the prolongation occurs within the 14-day prolongation window
+- each GateSeal can only be activated once and becomes unusable immediately after,
+- each GateSeal can only be activated within its expiry period and becomes unusable past its expiry timestamp even if it was never triggered,
+- each GateSeal’s immutable parameters (e.g., the pause duration) are specified by Tech and Analytics contributors and verified after deployment by internal and external auditors,
+- each GateSeal can only be prolonged by the sealing committee.
 
 
 Thus, the biggest damage a compromised GateSeal multisig can inflict is to pause withdrawals for the configured duration, given the DAO does not resume withdrawals sooner via governance.
@@ -37,20 +31,22 @@ A GateSeal is set up with an immutable configuration at the time of construction
 - the sealing committee, an account responsible for triggering the seal,
 - the seal duration, a period for which the contracts will be sealed,
 - the sealables, a list of contracts to be sealed,
-- the initial lifetime after which the GateSeal expires unless prolonged,
-- the number of prolongations available,
+- the expiry timestamp after which the GateSeal expires unless prolonged,
+- the prolongation limit, the maximum number of allowed prolongations,
+- the prolongation period, the extra time added to the contract with each prolongation,
+- the prolongation window, the active window during which the committee can prolong the contract,
+- the DAO Ops Reserve, the time buffer for DAO Ops to deploy a new GateSeal before the current one expires.
 
 Important to note, that GateSeal does not bypass the access control settings for pausable contracts, which is why GateSeal must be given the appropriate permissions beforehand. If the seal has not yet been triggered and has not expired, the sealing committee can call `prolongLifetime` to extend the lifetime using one of the remaining prolongations. In an emergency the sealing committee simply calls the `seal` function which immediately pauses all configured sealables and expires the GateSeal.
 
 ## How are GateSeals created?
 GateSealV2 is created using the GateSealFactoryV2. The factory uses the blueprint pattern whereby new GateSealV2 is deployed using the initcode (blueprint) stored onchain. The blueprint is essentially a broken GateSealV2 that can only be used to create new GateSealV2.
 
-The factory's `create_gate_seal` function takes the number of allowed prolongations and the initial lifetime alongside the original parameters.
 While Vyper offers other ways to create new contracts, we opted to use the blueprint pattern because it creates a fully autonomous contract without any dependencies. Unlike other contract-creating functions, [`create_from_blueprint`](https://docs.vyperlang.org/en/stable/built-in-functions.html#chain-interaction) invokes the constructor of the contract, thus, helping avoid the initialization shenanigans.
 
-While Vyper offers other ways to create new contracts, we opted to use the blueprint pattern because it creates a fully autonomous contract without any dependencies. Unlike other contract-creating functions, [`create_from_blueprint`](https://docs.vyperlang.org/en/stable/built-in-functions.html#chain-interaction) invokes the constructor of the contract, thus, helping avoid the initilization shenanigans.
+While Vyper offers other ways to create new contracts, we opted to use the blueprint pattern because it creates a fully autonomous contract without any dependencies. Unlike other contract-creating functions, [`create_from_blueprint`](https://docs.vyperlang.org/en/stable/built-in-functions.html#chain-interaction) invokes the constructor of the contract, thus, helping avoid the initialization shenanigans.
 
-The blueprint follows the [EIP-5202](https://eips.ethereum.org/EIPS/eip-5202) format, which includes a header that prevents the contract from being called and specifies the version. 
+The blueprint follows the [EIP-5202](https://eips.ethereum.org/EIPS/eip-5202) format, which includes a header that prevents the contract from being called and specifies the version.
 
 ## Dependencies
 
@@ -156,8 +152,11 @@ ape run scripts/deploy_factory.py
  - `SEALING_COMMITTEE` - address of the sealing committee;
  - `SEAL_DURATION_SECONDS` - duration of the seal in seconds;
  - `SEALABLES` - a comma-separated list of pausable contracts;
- - `INITIAL_LIFETIME_SECONDS` - time until the first expiry;
- - `PROLONGATIONS` - number of prolongations allowed;
+ - `EXPIRY_TIMESTAMP` - unix timestamp when the GateSeal expires;
+ - `PROLONGATION_LIMIT` - prolongation limit;
+ - `PROLONGATION_PERIOD_SECONDS` – prolongation period in seconds;
+ - `PROLONGATION_WINDOW_SECONDS` – prolongation window in seconds;
+ - `DAO_OPS_RESERVE_SECONDS` – DAO Ops reserve in seconds.
 
 4. Deploy the GateSeal using the deployed factory
 ```shell

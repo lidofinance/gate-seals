@@ -23,32 +23,32 @@ def main():
     with open(deployed_filename, "r") as deployed_file:
         deployed_data = json.load(deployed_file)
 
-    assert (
-        gate_seal.get_sealing_committee()
-        == deployed_data["params"]["sealing_committee"]
-    )
+    params = deployed_data["params"]
+    assert gate_seal.get_sealing_committee() == params["sealing_committee"]
     logger.success("sealing_committee matches!")
 
-    assert (
-        gate_seal.get_seal_duration_seconds()
-        == deployed_data["params"]["seal_duration_seconds"]
-    )
+    assert gate_seal.get_seal_duration_seconds() == params["seal_duration_seconds"]
     logger.success("seal_duration_seconds matches!")
 
-    assert gate_seal.get_sealables() == deployed_data["params"]["sealables"]
+    assert gate_seal.get_sealables() == params["sealables"]
     logger.success("sealables matches!")
 
+    assert gate_seal.get_prolongations_remaining() == params["prolongation_limit"]
+    logger.success("prolongation_limit matches!")
+    assert gate_seal.get_expiry_timestamp() == params["expiry_timestamp"]
+    logger.success("expiry_timestamp matches!")
     assert (
-        gate_seal.get_initial_lifetime_seconds()
-        == deployed_data["params"]["initial_lifetime_seconds"]
+        gate_seal.get_prolongation_period_seconds()
+        == params["prolongation_period_seconds"]
     )
-    logger.success("initial_lifetime_seconds matches!")
-
+    logger.success("prolongation_period_seconds matches!")
     assert (
-        gate_seal.get_prolongations_remaining()
-        == deployed_data["params"]["prolongations"]
+        gate_seal.get_prolongation_window_seconds()
+        == params["prolongation_window_seconds"]
     )
-    logger.success("prolongations matches!")
+    logger.success("prolongation_window_seconds matches!")
+    assert gate_seal.get_dao_ops_reserve_seconds() == params["dao_ops_reserve_seconds"]
+    logger.success("dao_ops_reserve_seconds matches!")
 
     # simulating GateSeal flow
     logger.info("simulating GateSeal flow")

@@ -1,10 +1,14 @@
+from ape import chain
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import (
-    PROLONGATION_PERIOD_SECONDS,
     TOTAL_LIFETIME_SECONDS,
     SECONDS_PER_DAY,
-    MIN_INITIAL_LIFETIME_SECONDS,
-    MAX_INITIAL_LIFETIME_SECONDS,
+)
+from .conftest import (
+    PROLONGATION_PERIOD_SECONDS,
+    MIN_EXPIRY_OFFSET_SECONDS,
+    PROLONGATION_WINDOW_SECONDS,
+    DAO_OPS_RESERVE_SECONDS,
 )
 
 
@@ -23,7 +27,8 @@ def test_happy_path(project, accounts):
 
     # Step 4. Deploy the GateSealV2 factory and pass the address of the GateSealV2 blueprint
     gate_seal_factory = project.GateSealFactoryV2.deploy(
-        blueprint_address, sender=DEPLOYER
+        blueprint_address,
+        sender=DEPLOYER,
     )
 
     assert (
@@ -37,16 +42,15 @@ def test_happy_path(project, accounts):
     for _ in range(8):
         SEALABLES.append(project.SealableMock.deploy(False, False, sender=DEPLOYER))
 
-    INITIAL_LIFETIME_SECONDS = PROLONGATION_PERIOD_SECONDS + 100
+    EXPIRY_TIMESTAMP = chain.pending_timestamp + PROLONGATION_PERIOD_SECONDS + 100
 
+    lifetime = EXPIRY_TIMESTAMP - chain.pending_timestamp
     assert (
-        MIN_INITIAL_LIFETIME_SECONDS
-        <= INITIAL_LIFETIME_SECONDS
-        <= MAX_INITIAL_LIFETIME_SECONDS
-    ), f"Initial lifetime {INITIAL_LIFETIME_SECONDS} not in range [{MIN_INITIAL_LIFETIME_SECONDS}, {MAX_INITIAL_LIFETIME_SECONDS}]"
+        lifetime >= MIN_EXPIRY_OFFSET_SECONDS
+    ), f"Lifetime {lifetime} is below minimum {MIN_EXPIRY_OFFSET_SECONDS}"
 
-    PROLONGATIONS = (
-        TOTAL_LIFETIME_SECONDS - INITIAL_LIFETIME_SECONDS
+    PROLONGATION_LIMIT = (
+        TOTAL_LIFETIME_SECONDS - lifetime
     ) // PROLONGATION_PERIOD_SECONDS
 
     # Step 6. Create a GateSealV2 using the factory
@@ -54,8 +58,11 @@ def test_happy_path(project, accounts):
         SEALING_COMMITTEE,
         SEAL_DURATION_SECONDS,
         SEALABLES,
-        INITIAL_LIFETIME_SECONDS,
-        PROLONGATIONS,
+        EXPIRY_TIMESTAMP,
+        PROLONGATION_LIMIT,
+        PROLONGATION_PERIOD_SECONDS,
+        PROLONGATION_WINDOW_SECONDS,
+        DAO_OPS_RESERVE_SECONDS,
         sender=DEPLOYER,
     )
 
@@ -70,7 +77,7 @@ def test_happy_path(project, accounts):
         SEALABLES
     ), "incorrect number of sealables"
 
-    # Step 7. Seal one of the sealables
+    # Step 7. Seal all sealables
     SEALABLE = SEALABLES[0]
     gate_seal.seal(sender=SEALING_COMMITTEE)
     assert project.SealableMock.at(SEALABLE).isPaused(), "failed to seal"

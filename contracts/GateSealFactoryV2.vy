@@ -54,8 +54,11 @@ def create_gate_seal(
     _sealing_committee: address,
     _seal_duration_seconds: uint256,
     _sealables: DynArray[address, MAX_SEALABLES],
-    _initial_lifetime_seconds: uint256,
-    _prolongations: uint256
+    _expiry_timestamp: uint256,
+    _prolongation_limit: uint256,
+    _prolongation_period_seconds: uint256,
+    _prolongation_window_seconds: uint256,
+    _dao_ops_reserve_seconds: uint256,
 ):
     """
     @notice Create a new GateSeal.
@@ -63,16 +66,22 @@ def create_gate_seal(
     @param _sealing_committee address of the multisig committee
     @param _seal_duration_seconds duration of the seal in seconds
     @param _sealables addresses of pausable contracts
-    @param _initial_lifetime_seconds time from deployment until the first expiry
-    @param _prolongations number of prolongations
+    @param _expiry_timestamp unix timestamp when the GateSeal will naturally expire
+    @param _prolongation_limit number of available prolongations
+    @param _prolongation_period_seconds prolongation period in seconds
+    @param _prolongation_window_seconds prolongation window in seconds
+    @param _dao_ops_reserve_seconds DAO Ops reserve in seconds
     """
     gate_seal: address = create_from_blueprint(
         BLUEPRINT,
         _sealing_committee,
         _seal_duration_seconds,
         _sealables,
-        _initial_lifetime_seconds,
-        _prolongations,
+        _expiry_timestamp,
+        _prolongation_limit,
+        _prolongation_period_seconds,
+        _prolongation_window_seconds,
+        _dao_ops_reserve_seconds,
         code_offset=EIP5202_CODE_OFFSET,
     )
 

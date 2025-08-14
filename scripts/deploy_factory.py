@@ -11,7 +11,6 @@ from utils.blueprint import (
     verify_eip5202_blueprint,
 )
 from utils.config import get_deployer, is_live_network
-from utils.env import load_env_variable
 from utils.helpers import construct_deployed_filename
 
 

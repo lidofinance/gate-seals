@@ -1,10 +1,15 @@
 import pytest
 from ape.exceptions import VirtualMachineError
+from ape.utils import ZERO_ADDRESS
 from utils.constants import (
-    MIN_INITIAL_LIFETIME_SECONDS,
-    MAX_INITIAL_LIFETIME_SECONDS,
-    PROLONGATION_PERIOD_SECONDS,
     TOTAL_LIFETIME_SECONDS,
+    SECONDS_PER_DAY,
+)
+from .conftest import (
+    MIN_EXPIRY_OFFSET_SECONDS,
+    PROLONGATION_PERIOD_SECONDS,
+    DAO_OPS_RESERVE_SECONDS,
+    PROLONGATION_WINDOW_SECONDS,
 )
 
 
@@ -29,89 +34,134 @@ def test_deploy_fails_with_duplicate_sealables(deploy_gate_seal, generate_sealab
         deploy_gate_seal(sealables_=sealables * 2)
 
 
-def test_deploy_fails_with_too_short_initial_lifetime(deploy_gate_seal):
-    with pytest.raises(VirtualMachineError):
-        deploy_gate_seal(initial_lifetime_seconds_=MIN_INITIAL_LIFETIME_SECONDS - 1)
+def test_deploy_fails_with_zero_address_in_sealables(
+    deploy_gate_seal, generate_sealables
+):
+    sealables = generate_sealables(1) + [ZERO_ADDRESS]
+    with pytest.raises(VirtualMachineError, match="sealables: includes zero address"):
+        deploy_gate_seal(sealables_=sealables)
 
 
-def test_deploy_fails_with_too_long_initial_lifetime(deploy_gate_seal):
-    with pytest.raises(VirtualMachineError):
-        deploy_gate_seal(initial_lifetime_seconds_=MAX_INITIAL_LIFETIME_SECONDS + 1)
+def test_deploy_fails_with_eoa_address(deploy_gate_seal, sealing_committee):
+    sealables = [sealing_committee.address]
+    with pytest.raises(VirtualMachineError, match="sealable: not a contract"):
+        deploy_gate_seal(sealables_=sealables)
 
 
-def test_deploy_fails_with_too_many_prolongations(deploy_gate_seal):
-    prolongations = 4
-    calculated_total_lifetime = (
-        MAX_INITIAL_LIFETIME_SECONDS + PROLONGATION_PERIOD_SECONDS * prolongations
-    )
-    # ensure calculated total lifetime exceeds the total (5 years), so deployment must revert
-    assert calculated_total_lifetime > TOTAL_LIFETIME_SECONDS
-    with pytest.raises(VirtualMachineError, match="total lifetime: exceeds max"):
+def test_deploy_fails_with_sealable_without_interface(
+    deploy_gate_seal, sealable_without_interface
+):
+    sealables = [sealable_without_interface.address]
+    with pytest.raises(
+        VirtualMachineError,
+        match="sealable: does not implement IPausableUntil interface",
+    ):
+        deploy_gate_seal(sealables_=sealables)
+
+
+def test_deploy_fails_with_expiry_too_early(deploy_gate_seal, now):
+    with pytest.raises(VirtualMachineError, match="expiry timestamp: below minimum"):
+        deploy_gate_seal(expiry_timestamp_=now() + MIN_EXPIRY_OFFSET_SECONDS - 1)
+
+
+def test_deploy_fails_with_too_long_expiry_offset(deploy_gate_seal, now):
+    excessive_expiry_offset = PROLONGATION_PERIOD_SECONDS * 2 + 10
+    with pytest.raises(VirtualMachineError, match="expiry timestamp: exceeds max"):
+        deploy_gate_seal(expiry_timestamp_=now() + excessive_expiry_offset)
+
+
+def test_deploy_fails_with_prolongation_period_too_short(deploy_gate_seal, now):
+    too_short_period = PROLONGATION_WINDOW_SECONDS + DAO_OPS_RESERVE_SECONDS - 1
+    with pytest.raises(VirtualMachineError, match="prolongation period: below minimum"):
         deploy_gate_seal(
-            prolongations_=prolongations,
-            initial_lifetime_seconds_=MAX_INITIAL_LIFETIME_SECONDS,
+            expiry_timestamp_=now() + MIN_EXPIRY_OFFSET_SECONDS,
+            prolongation_period_seconds_=too_short_period,
         )
 
 
-def test_prolongation_too_early(
-    networks,
-    gate_seal,
-    sealing_committee,
-):
-    window_start = gate_seal.get_prolongation_window_start()
-    networks.active_provider.set_timestamp(
-        window_start
-        - 25  # shift back to land in previous slot (12s slot time + buffer)
+def test_deploy_fails_with_prolongation_limit_too_high(deploy_gate_seal, now):
+    prolongation_limit = 5
+    expiry_offset_seconds = PROLONGATION_PERIOD_SECONDS + SECONDS_PER_DAY
+    calculated_total_lifetime = (
+        expiry_offset_seconds + PROLONGATION_PERIOD_SECONDS * prolongation_limit
     )
+    assert (
+        calculated_total_lifetime > TOTAL_LIFETIME_SECONDS
+    ), "calculated total lifetime should exceed maximum"
+    with pytest.raises(VirtualMachineError, match="total lifetime: exceeds max"):
+        deploy_gate_seal(
+            prolongation_limit_=prolongation_limit,
+            expiry_timestamp_=now() + expiry_offset_seconds,
+        )
+
+
+def test_deploy_fails_with_expiry_in_past(deploy_gate_seal, now):
+    with pytest.raises(
+        VirtualMachineError, match="expiry timestamp: must be in the future"
+    ):
+        deploy_gate_seal(expiry_timestamp_=now() - 1)
+
+
+def test_prolongation_too_early(networks, gate_seal, sealing_committee):
+    window_start = gate_seal.get_prolongation_window_start()
+    networks.active_provider.set_timestamp(window_start - 25)
     networks.active_provider.mine()
+    assert not gate_seal.is_in_prolongation_window()
     with pytest.raises(VirtualMachineError, match="prolongation window: too early"):
-        gate_seal.prolongLifetime(sender=sealing_committee)
+        gate_seal.prolong_lifetime(sender=sealing_committee)
 
 
-def test_prolongation_too_late(
-    networks,
-    gate_seal,
-    sealing_committee,
-):
+def test_prolongation_too_late(networks, gate_seal, sealing_committee):
     window_end = gate_seal.get_prolongation_window_end()
     networks.active_provider.set_timestamp(window_end + 1)
     networks.active_provider.mine()
+    assert not gate_seal.is_in_prolongation_window()
     with pytest.raises(VirtualMachineError, match="prolongation window: expired"):
-        gate_seal.prolongLifetime(sender=sealing_committee)
+        gate_seal.prolong_lifetime(sender=sealing_committee)
 
 
-def test_seal_and_fail_to_prolong(
-    project,
-    sealing_committee,
-    sealables,
-    gate_seal,
-):
+def test_sealing(project, sealing_committee, sealables, gate_seal):
     assert not gate_seal.is_expired()
     tx = gate_seal.seal(sender=sealing_committee)
-    assert tx.events[0].sealed_by == sealing_committee
-    assert tx.events[0].sealed_for == gate_seal.get_seal_duration_seconds()
+
+    assert len(tx.events) == len(sealables)
+
+    for i, sealable_addr in enumerate(sealables):
+        sealed_event = tx.events[i]
+        assert sealed_event.sealed_by == sealing_committee
+        assert sealed_event.sealed_for == gate_seal.get_seal_duration_seconds()
+        assert sealed_event.sealable == sealable_addr
+
     assert gate_seal.is_expired()
 
     for addr in sealables:
         assert project.SealableMock.at(addr).isPaused()
 
-    with pytest.raises(VirtualMachineError, match="gate seal: expired"):
-        gate_seal.prolongLifetime(sender=sealing_committee)
+
+def test_prolong_after_seal(sealing_committee, gate_seal):
+    assert not gate_seal.is_expired()
+    gate_seal.seal(sender=sealing_committee)
+    assert gate_seal.is_expired()
+
+    with pytest.raises(VirtualMachineError, match="GateSeal: expired"):
+        gate_seal.prolong_lifetime(sender=sealing_committee)
+
+    assert not gate_seal.is_in_prolongation_window()
+
+    assert gate_seal.get_prolongation_window_start() == 0
+    assert gate_seal.get_prolongation_window_end() == 0
 
 
-def test_prolongation_in_window(
-    networks,
-    gate_seal,
-    sealing_committee,
-):
+def test_prolong_in_window_at_the_start(networks, gate_seal, sealing_committee):
     window_start = gate_seal.get_prolongation_window_start()
     expiry = gate_seal.get_expiry_timestamp()
     prolongations_remaining = gate_seal.get_prolongations_remaining()
     prolongation_period = gate_seal.get_prolongation_period_seconds()
     networks.active_provider.set_timestamp(window_start + 1)
     networks.active_provider.mine()
-    tx = gate_seal.prolongLifetime(sender=sealing_committee)
-
+    assert gate_seal.is_in_prolongation_window()
+    tx = gate_seal.prolong_lifetime(sender=sealing_committee)
+    assert not gate_seal.is_in_prolongation_window()
     assert tx.events[0].prolonged_by == sealing_committee
     assert tx.events[0].prolongations_remaining == prolongations_remaining - 1
     assert tx.events[0].new_expiry == expiry + prolongation_period
@@ -120,17 +170,31 @@ def test_prolongation_in_window(
     assert gate_seal.get_prolongations_remaining() == prolongations_remaining - 1
 
 
-def test_cannot_prolong_twice(
-    networks,
-    gate_seal,
-    sealing_committee,
-):
+def test_prolong_in_window_at_the_end(networks, gate_seal, sealing_committee):
+    window_end = gate_seal.get_prolongation_window_end()
+    networks.active_provider.set_timestamp(window_end - 1)
+    networks.active_provider.mine()
+    assert gate_seal.is_in_prolongation_window()
+    gate_seal.prolong_lifetime(sender=sealing_committee)
+    assert not gate_seal.is_in_prolongation_window()
+
+
+def test_cannot_prolong_twice(networks, gate_seal, sealing_committee):
     window_start = gate_seal.get_prolongation_window_start()
     networks.active_provider.set_timestamp(window_start + 1)
     networks.active_provider.mine()
-    gate_seal.prolongLifetime(sender=sealing_committee)
-    with pytest.raises(VirtualMachineError, match="prolongation window: too early"):
-        gate_seal.prolongLifetime(sender=sealing_committee)
+
+    assert gate_seal.is_in_prolongation_window()
+    gate_seal.prolong_lifetime(sender=sealing_committee)
+    assert not gate_seal.is_in_prolongation_window()
+
+    with pytest.raises(VirtualMachineError, match="prolongations: exhausted"):
+        gate_seal.prolong_lifetime(sender=sealing_committee)
+
+
+def test_prolong_under_invalid_committee(gate_seal, stranger):
+    with pytest.raises(VirtualMachineError):
+        gate_seal.prolong_lifetime(sender=stranger)
 
 
 def test_seal_under_invalid_committee(gate_seal, stranger):
@@ -138,6 +202,83 @@ def test_seal_under_invalid_committee(gate_seal, stranger):
         gate_seal.seal(sender=stranger)
 
 
-def test_prolong_under_invalid_committee(gate_seal, stranger):
-    with pytest.raises(VirtualMachineError):
-        gate_seal.prolongLifetime(sender=stranger)
+def test_prolong_after_natural_expiry_reverts(networks, gate_seal, sealing_committee):
+    expiry_timestamp = gate_seal.get_expiry_timestamp()
+    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    networks.active_provider.mine()
+
+    assert gate_seal.is_expired()
+
+    with pytest.raises(VirtualMachineError, match="GateSeal: expired"):
+        gate_seal.prolong_lifetime(sender=sealing_committee)
+
+    assert gate_seal.get_prolongation_window_start() == 0
+    assert gate_seal.get_prolongation_window_end() == 0
+
+
+def test_seal_after_expiry_reverts(networks, gate_seal, sealing_committee):
+    expiry_timestamp = gate_seal.get_expiry_timestamp()
+    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    networks.active_provider.mine()
+
+    assert gate_seal.is_expired()
+
+    with pytest.raises(VirtualMachineError, match="GateSeal: expired"):
+        gate_seal.seal(sender=sealing_committee)
+
+
+def test_gate_seal_stores_immutables(gate_seal, sealables, sealing_committee):
+    assert gate_seal.get_prolongation_period_seconds() == PROLONGATION_PERIOD_SECONDS
+    assert gate_seal.get_prolongation_window_seconds() == PROLONGATION_WINDOW_SECONDS
+    assert gate_seal.get_dao_ops_reserve_seconds() == DAO_OPS_RESERVE_SECONDS
+    assert gate_seal.get_sealing_committee() == sealing_committee
+    assert gate_seal.get_sealables() == sealables
+
+
+def test_seal_fails_with_broken_pause_contracts(
+    deploy_gate_seal, normal_sealable, sealable_with_broken_pause, sealing_committee
+):
+    sealables = [normal_sealable.address, sealable_with_broken_pause.address]
+    gate_seal = deploy_gate_seal(sealables_=sealables)
+
+    # Index 1 (sealable_with_broken_pause) should fail, bitmap = 1 << 1 = 2
+    with pytest.raises(VirtualMachineError, match="reason string '2'"):
+        gate_seal.seal(sender=sealing_committee)
+
+    assert not gate_seal.is_expired()
+
+
+def test_seal_fails_with_reverting_contracts(
+    deploy_gate_seal, normal_sealable, reverting_sealable, sealing_committee
+):
+    sealables = [normal_sealable.address, reverting_sealable.address]
+    gate_seal = deploy_gate_seal(sealables_=sealables)
+
+    # Index 1 (reverting_sealable) should fail, bitmap = 1 << 1 = 2
+    with pytest.raises(VirtualMachineError, match="reason string '2'"):
+        gate_seal.seal(sender=sealing_committee)
+
+    assert not gate_seal.is_expired()
+
+
+def test_seal_fails_with_multiple_failed_contracts_bitmap_encoding(
+    deploy_gate_seal,
+    normal_sealable,
+    sealable_with_broken_pause,
+    reverting_sealable,
+    sealing_committee,
+):
+    sealables = [
+        normal_sealable.address,
+        sealable_with_broken_pause.address,
+        reverting_sealable.address,
+    ]
+
+    gate_seal = deploy_gate_seal(sealables_=sealables)
+
+    # Failed indexes: 1 and 2
+    # Bitmap: (1 << 1) | (1 << 2) = 2 | 4 = 6
+    with pytest.raises(VirtualMachineError, match="reason string '6'"):
+        gate_seal.seal(sender=sealing_committee)
+
+    assert not gate_seal.is_expired()
