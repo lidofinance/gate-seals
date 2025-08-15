@@ -3,8 +3,8 @@
 """
 @title GateSealFactoryV2
 @author alex.k@lido.fi
-@notice A factory contract for GateSeals
-@dev This contract is meant to simplify the GateSeal deploy.
+@notice A factory contract for GateSeals (V2)
+@dev This contract is meant to simplify the GateSeal V2 deploy.
      The factory features a single write function that deploys
      a new GateSeal with the given parameters based
      on the blueprint provided at the factory construction
@@ -21,7 +21,7 @@
 """
 
 event GateSealCreated:
-    gate_seal: address
+    gate_seal: indexed(address)
 
 
 # First 3 bytes of the blueprint are the EIP-5202 header;
@@ -32,7 +32,7 @@ EIP5202_CODE_OFFSET: constant(uint256) = 3
 # GateSeals were originally designed to pause WithdrawalQueue and ValidatorExitBus,
 # however, there is a non-zero chance that there might be more in the future, which
 # is why we've opted to use a dynamic-size array.
-MAX_SEALABLES: constant(uint256) = 8
+MAX_SEALABLES: constant(uint256) = 10
 
 # Address of the blueprint that must be deployed beforehand
 BLUEPRINT: immutable(address)
@@ -58,7 +58,7 @@ def create_gate_seal(
     _prolongation_limit: uint256,
     _prolongation_period_seconds: uint256,
     _prolongation_window_seconds: uint256,
-    _dao_ops_reserve_seconds: uint256,
+    _pre_expiration_offset: uint256,
 ):
     """
     @notice Create a new GateSeal.
@@ -70,7 +70,7 @@ def create_gate_seal(
     @param _prolongation_limit number of available prolongations
     @param _prolongation_period_seconds prolongation period in seconds
     @param _prolongation_window_seconds prolongation window in seconds
-    @param _dao_ops_reserve_seconds DAO Ops reserve in seconds
+    @param _pre_expiration_offset prolongation window end offset before the expiration
     """
     gate_seal: address = create_from_blueprint(
         BLUEPRINT,

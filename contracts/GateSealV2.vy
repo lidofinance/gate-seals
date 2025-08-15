@@ -4,7 +4,7 @@
 @title GateSealV2
 @author alex.k@lido.fi
 @notice A one-time panic button for pausable contracts
-@dev GateSeal is a one-time immediate emergency pause for pausable contracts.
+@dev GateSealV2 is a one-time immediate emergency pause for pausable contracts.
      It must be operated by a multisig committee, though the code does not
      perform any such checks. Bypassing the DAO vote, GateSeal pauses 
      the contract(s) immediately for a set duration, e.g. one week, which gives
@@ -15,7 +15,7 @@
      GateSeals serve as a long-term safety mechanism. 
      A committee ensures the GateSeal remains viable by prolonging its duration periodically.
      Should they fail to do so, the GateSeal will automatically expire, requiring the deployment of a new one.
-     This approach maintains the multisig's limitations in terms of power and duration, while allowing the DAO to bypass the need for an annual full vote.
+     This approach maintains the multisig's limitations in terms of power and duration, while streamlining the full DAO vote cadence.
 
      In the context of GateSeals, sealing is synonymous with pausing the contracts.
      Sealables are pausable contracts that implement the `pauseFor(duration)` interface.
@@ -25,12 +25,12 @@
 event Sealed:
     sealed_by: address
     sealed_for: uint256
-    sealable: address
+    sealable: indexed(address)
 
 event Prolonged:
     prolonged_by: address
     prolongations_remaining: uint256
-    new_expiry: uint256
+    new_expiry: indexed(uint256)
 
 interface IPausableUntil:
     def pauseFor(_duration: uint256): nonpayable
