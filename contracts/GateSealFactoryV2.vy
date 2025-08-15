@@ -81,7 +81,7 @@ def create_gate_seal(
         _prolongation_limit,
         _prolongation_period_seconds,
         _prolongation_window_seconds,
-        _dao_ops_reserve_seconds,
+        _pre_expiration_offset,
         code_offset=EIP5202_CODE_OFFSET,
     )
 

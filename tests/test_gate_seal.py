@@ -8,7 +8,7 @@ from utils.constants import (
 from .conftest import (
     MIN_EXPIRY_OFFSET_SECONDS,
     PROLONGATION_PERIOD_SECONDS,
-    DAO_OPS_RESERVE_SECONDS,
+    PRE_EXPIRATION_OFFSET,
     PROLONGATION_WINDOW_SECONDS,
 )
 
@@ -71,7 +71,7 @@ def test_deploy_fails_with_too_long_expiry_offset(deploy_gate_seal, now):
 
 
 def test_deploy_fails_with_prolongation_period_too_short(deploy_gate_seal, now):
-    too_short_period = PROLONGATION_WINDOW_SECONDS + DAO_OPS_RESERVE_SECONDS - 1
+    too_short_period = PROLONGATION_WINDOW_SECONDS + PRE_EXPIRATION_OFFSET - 1
     with pytest.raises(VirtualMachineError, match="prolongation period: below minimum"):
         deploy_gate_seal(
             expiry_timestamp_=now() + MIN_EXPIRY_OFFSET_SECONDS,
@@ -230,7 +230,7 @@ def test_seal_after_expiry_reverts(networks, gate_seal, sealing_committee):
 def test_gate_seal_stores_immutables(gate_seal, sealables, sealing_committee):
     assert gate_seal.get_prolongation_period_seconds() == PROLONGATION_PERIOD_SECONDS
     assert gate_seal.get_prolongation_window_seconds() == PROLONGATION_WINDOW_SECONDS
-    assert gate_seal.get_dao_ops_reserve_seconds() == DAO_OPS_RESERVE_SECONDS
+    assert gate_seal.get_pre_expiration_offset() == PRE_EXPIRATION_OFFSET
     assert gate_seal.get_sealing_committee() == sealing_committee
     assert gate_seal.get_sealables() == sealables
 

@@ -22,7 +22,7 @@ def main():
     prolongation_limit = int(load_env_variable("PROLONGATION_LIMIT"))
     prolongation_period_seconds = int(load_env_variable("PROLONGATION_PERIOD_SECONDS"))
     prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
-    dao_ops_reserve_seconds = int(load_env_variable("DAO_OPS_RESERVE_SECONDS"))
+    pre_expiration_offset = int(load_env_variable("PRE_EXPIRATION_OFFSET"))
 
     factory = project.GateSealFactoryV2.at(to_checksum_address(factory_address))
 
@@ -36,7 +36,7 @@ def main():
         prolongation_limit,
         prolongation_period_seconds,
         prolongation_window_seconds,
-        dao_ops_reserve_seconds,
+        pre_expiration_offset,
         sender=deployer,
         max_priority_fee="5 gwei",
     )
@@ -63,7 +63,7 @@ def main():
                         "prolongation_limit": prolongation_limit,
                         "prolongation_period_seconds": prolongation_period_seconds,
                         "prolongation_window_seconds": prolongation_window_seconds,
-                        "dao_ops_reserve_seconds": dao_ops_reserve_seconds,
+                        "pre_expiration_offset": pre_expiration_offset,
                     },
                 }
             )

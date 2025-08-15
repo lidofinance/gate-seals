@@ -10,8 +10,8 @@ from utils.constants import (
 # Default parameters for contracts under test
 PROLONGATION_PERIOD_SECONDS = SECONDS_PER_DAY * 365
 PROLONGATION_WINDOW_SECONDS = SECONDS_PER_DAY * 14
-DAO_OPS_RESERVE_SECONDS = SECONDS_PER_DAY * 60
-MIN_EXPIRY_OFFSET_SECONDS = PROLONGATION_WINDOW_SECONDS + DAO_OPS_RESERVE_SECONDS
+PRE_EXPIRATION_OFFSET = SECONDS_PER_DAY * 60
+MIN_EXPIRY_OFFSET_SECONDS = PROLONGATION_WINDOW_SECONDS + PRE_EXPIRATION_OFFSET
 
 """
 
@@ -78,7 +78,7 @@ def gate_seal(
         prolongation_limit,
         PROLONGATION_PERIOD_SECONDS,
         PROLONGATION_WINDOW_SECONDS,
-        DAO_OPS_RESERVE_SECONDS,
+        PRE_EXPIRATION_OFFSET,
         sender=deployer,
     )
 
@@ -177,7 +177,7 @@ def deploy_gate_seal(
         prolongation_limit_=None,
         prolongation_period_seconds_=None,
         prolongation_window_seconds_=None,
-        dao_ops_reserve_seconds_=None,
+        pre_expiration_offset_=None,
         sender=None,
     ):
         # Use defaults if not overridden
@@ -210,10 +210,10 @@ def deploy_gate_seal(
             if prolongation_window_seconds_ is not None
             else PROLONGATION_WINDOW_SECONDS
         )
-        final_dao_ops_reserve = (
-            dao_ops_reserve_seconds_
-            if dao_ops_reserve_seconds_ is not None
-            else DAO_OPS_RESERVE_SECONDS
+        final_pre_expiration_offset = (
+            pre_expiration_offset_
+            if pre_expiration_offset_ is not None
+            else PRE_EXPIRATION_OFFSET
         )
         final_sender = sender if sender is not None else deployer
 
@@ -225,7 +225,7 @@ def deploy_gate_seal(
             final_prolongation_limit,
             final_prolongation_period,
             final_prolongation_window,
-            final_dao_ops_reserve,
+            final_pre_expiration_offset,
             sender=final_sender,
         )
 

@@ -50,12 +50,12 @@ MAX_SEALABLES: constant(uint256) = 8
 # Each prolongation extends the GateSeal by the provided period.
 PROLONGATION_PERIOD_SECONDS: immutable(uint256)
 
-# Timeline: Now → [PROLONGATION_WINDOW] → [DAO_OPS_RESERVE] → Expiry
+# Timeline: Now → [PROLONGATION_WINDOW] → [PRE_EXPIRATION_OFFSET] → Expiry
 # PROLONGATION_WINDOW is the period during which the committee can prolong
 PROLONGATION_WINDOW_SECONDS: immutable(uint256)
 
-# DAO_OPS_RESERVE ensures the DAO can deploy a new GateSeal if prolongation fails
-DAO_OPS_RESERVE_SECONDS: immutable(uint256)
+# PRE_EXPIRATION_OFFSET ensures the DAO can deploy a new GateSeal if prolongation fails
+PRE_EXPIRATION_OFFSET: immutable(uint256)
 
 
 # Total lifetime across all prolongations is capped at five years
@@ -103,19 +103,19 @@ def __init__(
     _prolongation_limit: uint256,
     _prolongation_period_seconds: uint256,
     _prolongation_window_seconds: uint256,
-    _dao_ops_reserve_seconds: uint256,
+    _pre_expiration_offset: uint256,
 ):
     assert _sealing_committee != empty(address), "sealing committee: zero address"
     assert len(_sealables) > 0, "sealables: empty list"
 
-    min_prolongation_period_seconds: uint256 = _prolongation_window_seconds + _dao_ops_reserve_seconds
+    min_prolongation_period_seconds: uint256 = _prolongation_window_seconds + _pre_expiration_offset
     max_lifetime_seconds: uint256 = _prolongation_period_seconds * 2
 
     assert _prolongation_period_seconds >= min_prolongation_period_seconds, "prolongation period: below minimum"
     
     PROLONGATION_PERIOD_SECONDS = _prolongation_period_seconds
     PROLONGATION_WINDOW_SECONDS = _prolongation_window_seconds
-    DAO_OPS_RESERVE_SECONDS = _dao_ops_reserve_seconds
+    PRE_EXPIRATION_OFFSET = _pre_expiration_offset
     assert _expiry_timestamp >= block.timestamp, "expiry timestamp: must be in the future"
     lifetime_seconds: uint256 = _expiry_timestamp - block.timestamp
     assert lifetime_seconds >= min_prolongation_period_seconds, "expiry timestamp: below minimum"
@@ -168,8 +168,8 @@ def get_prolongation_window_seconds() -> uint256:
 
 @external
 @view
-def get_dao_ops_reserve_seconds() -> uint256:
-    return DAO_OPS_RESERVE_SECONDS
+def get_pre_expiration_offset() -> uint256:
+    return PRE_EXPIRATION_OFFSET
 
 
 @external
@@ -289,8 +289,8 @@ def _expire_immediately():
 def _get_prolongation_window_start() -> uint256:
     if self._is_expired():
         return 0
-    
-    return self.expiry_timestamp - DAO_OPS_RESERVE_SECONDS - PROLONGATION_WINDOW_SECONDS
+
+    return self.expiry_timestamp - PRE_EXPIRATION_OFFSET - PROLONGATION_WINDOW_SECONDS
 
 
 @internal
@@ -298,8 +298,8 @@ def _get_prolongation_window_start() -> uint256:
 def _get_prolongation_window_end() -> uint256:
     if self._is_expired():
         return 0
-        
-    return self.expiry_timestamp - DAO_OPS_RESERVE_SECONDS
+
+    return self.expiry_timestamp - PRE_EXPIRATION_OFFSET
 
 
 @internal

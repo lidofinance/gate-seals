@@ -34,7 +34,7 @@ def main():
     sealables = [sealable.address]
     prolongation_period_seconds = int(load_env_variable("PROLONGATION_PERIOD_SECONDS"))
     prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
-    dao_ops_reserve_seconds = int(load_env_variable("DAO_OPS_RESERVE_SECONDS"))
+    pre_expiration_offset = int(load_env_variable("PRE_EXPIRATION_OFFSET"))
     expiry_timestamp = chain.pending_timestamp + prolongation_period_seconds
     prolongation_limit = 3
 
@@ -46,7 +46,7 @@ def main():
         prolongation_limit,
         prolongation_period_seconds,
         prolongation_window_seconds,
-        dao_ops_reserve_seconds,
+        pre_expiration_offset,
         sender=deployer,
     )
     logger.success("GateSeal deployed!")
@@ -65,8 +65,8 @@ def main():
     logger.success("Prolongation period matches")
     assert gate_seal.get_prolongation_window_seconds() == prolongation_window_seconds
     logger.success("Prolongation window matches")
-    assert gate_seal.get_dao_ops_reserve_seconds() == dao_ops_reserve_seconds
-    logger.success("DAO ops reserve matches")
+    assert gate_seal.get_pre_expiration_offset() == pre_expiration_offset
+    logger.success("pre-expiration offset matches")
 
     logger.info("Sealing...")
     assert not sealable.isPaused()
