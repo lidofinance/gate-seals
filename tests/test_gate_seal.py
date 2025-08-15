@@ -2,6 +2,7 @@ import pytest
 from ape.exceptions import VirtualMachineError
 from ape.utils import ZERO_ADDRESS
 from utils.constants import (
+    MAX_SEALABLES,
     TOTAL_LIFETIME_SECONDS,
     SECONDS_PER_DAY,
 )
@@ -25,7 +26,7 @@ def test_deploy_fails_with_no_sealables(deploy_gate_seal):
 
 def test_deploy_fails_with_too_many_sealables(deploy_gate_seal, generate_sealables):
     with pytest.raises(VirtualMachineError):
-        deploy_gate_seal(sealables_=generate_sealables(9))
+        deploy_gate_seal(sealables_=generate_sealables(MAX_SEALABLES + 1))
 
 
 def test_deploy_fails_with_duplicate_sealables(deploy_gate_seal, generate_sealables):

@@ -41,10 +41,10 @@ interface IPausableUntil:
 SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 
 # === SEALABLE CONTRACTS LIMITS ===
-# The maximum number of sealables is 8.
+# The maximum number of sealables is 10.
 # GateSeals were originally designed to pause WithdrawalQueue and ValidatorExitBus,
 # however, there is a non-zero chance that there might be more in the future.
-MAX_SEALABLES: constant(uint256) = 8
+MAX_SEALABLES: constant(uint256) = 10
 
 # === PROLONGATION SYSTEM ===
 # Each prolongation extends the GateSeal by the provided period.
@@ -79,8 +79,8 @@ SEAL_DURATION_SECONDS: immutable(uint256)
 
 # The addresses of pausable contracts. The GateSeal must have the permission to
 # pause these contracts at the time of the sealing.
-# All contracts in this list will be paused when seal() is called.
-# The set of sealables is predefined at deployment time and cannot be changed.
+# Sealing can be partial, meaning the committee may decide to pause only a subset of this list,
+# though GateSeal will still expire immediately.
 sealables: DynArray[address, MAX_SEALABLES]
 
 # Absolute unix timestamp when the current GateSeal lifetime ends unless it is prolonged.

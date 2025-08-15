@@ -28,7 +28,7 @@ event GateSealCreated:
 # The actual code of the contract starts at 4th byte
 EIP5202_CODE_OFFSET: constant(uint256) = 3
 
-# The maximum number of sealables is 8.
+# The maximum number of sealables is 10.
 # GateSeals were originally designed to pause WithdrawalQueue and ValidatorExitBus,
 # however, there is a non-zero chance that there might be more in the future, which
 # is why we've opted to use a dynamic-size array.
