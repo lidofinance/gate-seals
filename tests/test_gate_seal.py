@@ -43,23 +43,6 @@ def test_deploy_fails_with_zero_address_in_sealables(
         deploy_gate_seal(sealables_=sealables)
 
 
-def test_deploy_fails_with_eoa_address(deploy_gate_seal, sealing_committee):
-    sealables = [sealing_committee.address]
-    with pytest.raises(VirtualMachineError, match="sealable: not a contract"):
-        deploy_gate_seal(sealables_=sealables)
-
-
-def test_deploy_fails_with_sealable_without_interface(
-    deploy_gate_seal, sealable_without_interface
-):
-    sealables = [sealable_without_interface.address]
-    with pytest.raises(
-        VirtualMachineError,
-        match="sealable: does not implement IPausableUntil interface",
-    ):
-        deploy_gate_seal(sealables_=sealables)
-
-
 def test_deploy_fails_with_expiry_too_early(deploy_gate_seal, now):
     with pytest.raises(VirtualMachineError, match="expiry timestamp: below minimum"):
         deploy_gate_seal(expiry_timestamp_=now() + MIN_EXPIRY_OFFSET_SECONDS - 1)

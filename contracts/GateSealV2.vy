@@ -125,7 +125,6 @@ def __init__(
     
     for sealable: address in _sealables:
         assert sealable != empty(address), "sealables: includes zero address"
-        self._validate_sealable_interface(sealable)
     assert not self._has_duplicates(_sealables), "sealables: includes duplicates"
 
     SEALING_COMMITTEE = _sealing_committee
@@ -314,20 +313,6 @@ def _get_prolongation_window_end() -> uint256:
         return 0
 
     return self.expiry_timestamp - PRE_EXPIRATION_OFFSET
-
-
-@internal
-def _validate_sealable_interface(_sealable: address):
-    assert _sealable.codesize > 0, "sealable: not a contract"
-    
-    success: bool = raw_call(
-        _sealable,
-        method_id("isPaused()"),
-        revert_on_failure=False
-    )
-    
-    assert success, "sealable: does not implement IPausableUntil interface"
-
 
 
 @internal

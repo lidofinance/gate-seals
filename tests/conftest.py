@@ -153,11 +153,6 @@ def reverting_sealable(project, deployer):
 
 
 @pytest.fixture(scope="function")
-def sealable_without_interface(project, deployer):
-    return project.SealableWithoutInterface.deploy(sender=deployer)
-
-
-@pytest.fixture(scope="function")
 def deploy_gate_seal(
     project,
     deployer,
