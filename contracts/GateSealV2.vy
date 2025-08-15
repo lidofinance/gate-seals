@@ -234,12 +234,27 @@ def prolong_lifetime():
 
 
 @external
-def seal():
+def seal_all():
     """
-    @notice Seal the contract(s).
+    @notice Seal all the sealables.
     @dev    Immediately expires GateSeal and, thus, can only be called once.
-    @dev Seals all predefined sealables.
     """
+    self._seal_implementation(self.sealables)
+
+@external
+def seal_some(_sealables: DynArray[address, MAX_SEALABLES]):
+    """
+    @notice Seal a subset of the sealables.
+    @dev    Immediately expires GateSeal and, thus, can only be called once.
+    """
+    assert len(_sealables) > 0, "sealables: empty subset"
+    assert not self._has_duplicates(_sealables), "sealables: includes duplicates"
+    for sealable: address in _sealables:
+        assert sealable in self.sealables, "sealables: includes a non-sealable"
+    self._seal_implementation(_sealables)
+
+@internal
+def _seal_implementation(_sealables: DynArray[address, MAX_SEALABLES]):
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "GateSeal: expired"
 
@@ -252,8 +267,7 @@ def seal():
     failed_indexes: DynArray[uint256, MAX_SEALABLES] = []
     sealable_index: uint256 = 0
 
-    for sealable: address in self.sealables:
-
+    for sealable: address in _sealables:
         success: bool = raw_call(
             sealable,
             abi_encode(SEAL_DURATION_SECONDS, method_id=method_id("pauseFor(uint256)")),

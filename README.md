@@ -37,7 +37,7 @@ A GateSeal is set up with an immutable configuration at the time of construction
 - the prolongation window, the active window during which the committee can prolong the contract,
 - the pre-expiration offset, the time buffer for DAO Ops to deploy a new GateSeal before the current one expires.
 
-Important to note, that GateSeal does not bypass the access control settings for pausable contracts, which is why GateSeal must be given the appropriate permissions beforehand. If the seal has not yet been triggered and has not expired, the sealing committee can call `prolongLifetime` to extend the lifetime using one of the remaining prolongations. In an emergency the sealing committee simply calls the `seal` function which immediately pauses all configured sealables and expires the GateSeal.
+Important to note, that GateSeal does not bypass the access control settings for pausable contracts, which is why GateSeal must be given the appropriate permissions beforehand. If the seal has not yet been triggered and has not expired, the sealing committee can call `prolong_lifetime` to extend the lifetime using one of the remaining prolongations. In an emergency the sealing committee simply calls `seal_all` or `seal_some` to immediately pause all configured sealables and expire the GateSeal.
 
 ## How are GateSeals created?
 GateSealV2 is created using the GateSealFactoryV2. The factory uses the blueprint pattern whereby new GateSealV2 is deployed using the initcode (blueprint) stored onchain. The blueprint is essentially a broken GateSealV2 that can only be used to create new GateSealV2.

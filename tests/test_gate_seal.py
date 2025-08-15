@@ -121,9 +121,9 @@ def test_prolongation_too_late(networks, gate_seal, sealing_committee):
         gate_seal.prolong_lifetime(sender=sealing_committee)
 
 
-def test_sealing(project, sealing_committee, sealables, gate_seal):
+def test_sealing_with_seal_all(project, sealing_committee, sealables, gate_seal):
     assert not gate_seal.is_expired()
-    tx = gate_seal.seal(sender=sealing_committee)
+    tx = gate_seal.seal_all(sender=sealing_committee)
 
     assert len(tx.events) == len(sealables)
 
@@ -141,7 +141,7 @@ def test_sealing(project, sealing_committee, sealables, gate_seal):
 
 def test_prolong_after_seal(sealing_committee, gate_seal):
     assert not gate_seal.is_expired()
-    gate_seal.seal(sender=sealing_committee)
+    gate_seal.seal_all(sender=sealing_committee)
     assert gate_seal.is_expired()
 
     with pytest.raises(VirtualMachineError, match="GateSeal: expired"):
@@ -200,7 +200,7 @@ def test_prolong_under_invalid_committee(gate_seal, stranger):
 
 def test_seal_under_invalid_committee(gate_seal, stranger):
     with pytest.raises(VirtualMachineError):
-        gate_seal.seal(sender=stranger)
+        gate_seal.seal_all(sender=stranger)
 
 
 def test_prolong_after_natural_expiry_reverts(networks, gate_seal, sealing_committee):
@@ -225,7 +225,7 @@ def test_seal_after_expiry_reverts(networks, gate_seal, sealing_committee):
     assert gate_seal.is_expired()
 
     with pytest.raises(VirtualMachineError, match="GateSeal: expired"):
-        gate_seal.seal(sender=sealing_committee)
+        gate_seal.seal_all(sender=sealing_committee)
 
 
 def test_gate_seal_stores_immutables(gate_seal, sealables, sealing_committee):
@@ -244,7 +244,7 @@ def test_seal_fails_with_broken_pause_contracts(
 
     # Index 1 (sealable_with_broken_pause) should fail, bitmap = 1 << 1 = 2
     with pytest.raises(VirtualMachineError, match="reason string '2'"):
-        gate_seal.seal(sender=sealing_committee)
+        gate_seal.seal_all(sender=sealing_committee)
 
     assert not gate_seal.is_expired()
 
@@ -257,7 +257,7 @@ def test_seal_fails_with_reverting_contracts(
 
     # Index 1 (reverting_sealable) should fail, bitmap = 1 << 1 = 2
     with pytest.raises(VirtualMachineError, match="reason string '2'"):
-        gate_seal.seal(sender=sealing_committee)
+        gate_seal.seal_all(sender=sealing_committee)
 
     assert not gate_seal.is_expired()
 
@@ -280,6 +280,57 @@ def test_seal_fails_with_multiple_failed_contracts_bitmap_encoding(
     # Failed indexes: 1 and 2
     # Bitmap: (1 << 1) | (1 << 2) = 2 | 4 = 6
     with pytest.raises(VirtualMachineError, match="reason string '6'"):
-        gate_seal.seal(sender=sealing_committee)
+        gate_seal.seal_all(sender=sealing_committee)
 
     assert not gate_seal.is_expired()
+
+
+def test_seal_some_with_subset(
+    project, sealing_committee, generate_sealables, deploy_gate_seal
+):
+    test_sealables = generate_sealables(4)
+    gate_seal = deploy_gate_seal(sealables_=test_sealables)
+
+    assert not gate_seal.is_expired()
+
+    subset_to_seal = test_sealables[:2]
+    remaining_sealables = test_sealables[2:]
+
+    tx = gate_seal.seal_some(subset_to_seal, sender=sealing_committee)
+
+    assert len(tx.events) == len(subset_to_seal)
+
+    for i, sealable_addr in enumerate(subset_to_seal):
+        sealed_event = tx.events[i]
+        assert sealed_event.sealed_by == sealing_committee
+        assert sealed_event.sealed_for == gate_seal.get_seal_duration_seconds()
+        assert sealed_event.sealable == sealable_addr
+
+    assert gate_seal.is_expired()
+
+    for addr in subset_to_seal:
+        assert project.SealableMock.at(
+            addr
+        ).isPaused(), f"Sealable {addr} should be paused"
+
+    for addr in remaining_sealables:
+        assert not project.SealableMock.at(
+            addr
+        ).isPaused(), f"Sealable {addr} should NOT be paused"
+
+
+def test_seal_some_with_empty_list(gate_seal, sealing_committee):
+    with pytest.raises(VirtualMachineError, match="sealables: empty subset"):
+        gate_seal.seal_some([], sender=sealing_committee)
+
+
+def test_seal_some_with_duplicates(gate_seal, sealables, sealing_committee):
+    duplicates = [sealables[0], sealables[0]]
+    with pytest.raises(VirtualMachineError, match="sealables: includes duplicates"):
+        gate_seal.seal_some(duplicates, sender=sealing_committee)
+
+
+def test_seal_some_with_non_sealable(gate_seal, sealing_committee, stranger):
+    non_sealable = [stranger.address]
+    with pytest.raises(VirtualMachineError, match="sealables: includes a non-sealable"):
+        gate_seal.seal_some(non_sealable, sender=sealing_committee)

@@ -71,7 +71,7 @@ def main():
     logger.info("Sealing...")
     assert not sealable.isPaused()
 
-    seal_tx = gate_seal.seal(sender=deployer)
+    seal_tx = gate_seal.seal_all(sender=deployer)
     logger.success("Sealed")
 
     assert gate_seal.is_expired()

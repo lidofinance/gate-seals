@@ -79,7 +79,7 @@ def test_happy_path(project, accounts):
 
     # Step 7. Seal all sealables
     SEALABLE = SEALABLES[0]
-    gate_seal.seal(sender=SEALING_COMMITTEE)
+    gate_seal.seal_all(sender=SEALING_COMMITTEE)
     assert project.SealableMock.at(SEALABLE).isPaused(), "failed to seal"
 
     assert gate_seal.is_expired(), "must be expired after sealing all"
