@@ -131,10 +131,14 @@ def now(chain):
 
 @pytest.fixture(scope="session")
 def generate_sealables(project, deployer):
-    return lambda n, unpausable=False, reverts=False: [
-        project.SealableMock.deploy(unpausable, reverts, sender=deployer)
-        for _ in range(n)
-    ]
+    def _generate_sealables(n, unpausable=False, reverts=False):
+        sealables = []
+        for _ in range(n):
+            sealable = project.SealableMock.deploy(unpausable, reverts, sender=deployer)
+            sealables.append(sealable)
+        return sealables
+
+    return _generate_sealables
 
 
 @pytest.fixture(scope="function")
