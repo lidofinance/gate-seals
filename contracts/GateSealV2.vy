@@ -186,9 +186,15 @@ def get_prolongation_window_end() -> uint256:
 @external
 @view
 def is_in_prolongation_window() -> bool:
+    return self._is_in_prolongation_window()
+
+
+@internal
+@view
+def _is_in_prolongation_window() -> bool:
     start: uint256 = self._get_prolongation_window_start()
     end: uint256 = self._get_prolongation_window_end()
-    return block.timestamp >= start and block.timestamp <= end
+    return block.timestamp >= start and block.timestamp < end
 
 @external
 @view
@@ -218,10 +224,7 @@ def prolong_lifetime():
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "GateSeal: expired"
     assert self.prolongations_remaining > 0, "prolongations: exhausted"
-    start: uint256 = self._get_prolongation_window_start()
-    end: uint256 = self._get_prolongation_window_end()
-    assert block.timestamp >= start, "prolongation window: too early"
-    assert block.timestamp <= end, "prolongation window: expired"
+    assert self._is_in_prolongation_window(), "prolongation window: not active"
 
     self.expiry_timestamp += PROLONGATION_PERIOD_SECONDS
     self.prolongations_remaining -= 1

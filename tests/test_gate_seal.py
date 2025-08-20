@@ -88,19 +88,19 @@ def test_deploy_fails_with_expiry_in_past(deploy_gate_seal, now):
 
 def test_prolongation_too_early(networks, gate_seal, sealing_committee):
     window_start = gate_seal.get_prolongation_window_start()
-    networks.active_provider.set_timestamp(window_start - 25)
+    networks.active_provider.set_timestamp(window_start - 2)
     networks.active_provider.mine()
     assert not gate_seal.is_in_prolongation_window()
-    with pytest.raises(VirtualMachineError, match="prolongation window: too early"):
+    with pytest.raises(VirtualMachineError, match="prolongation window: not active"):
         gate_seal.prolong_lifetime(sender=sealing_committee)
 
 
 def test_prolongation_too_late(networks, gate_seal, sealing_committee):
     window_end = gate_seal.get_prolongation_window_end()
-    networks.active_provider.set_timestamp(window_end + 1)
+    networks.active_provider.set_timestamp(window_end)
     networks.active_provider.mine()
     assert not gate_seal.is_in_prolongation_window()
-    with pytest.raises(VirtualMachineError, match="prolongation window: expired"):
+    with pytest.raises(VirtualMachineError, match="prolongation window: not active"):
         gate_seal.prolong_lifetime(sender=sealing_committee)
 
 
@@ -156,7 +156,8 @@ def test_prolong_in_window_at_the_start(networks, gate_seal, sealing_committee):
 
 def test_prolong_in_window_at_the_end(networks, gate_seal, sealing_committee):
     window_end = gate_seal.get_prolongation_window_end()
-    networks.active_provider.set_timestamp(window_end - 1)
+    # Use window_end - 2 to account for Hardhat's complex timestamp behavior
+    networks.active_provider.set_timestamp(window_end - 2)
     networks.active_provider.mine()
     assert gate_seal.is_in_prolongation_window()
     gate_seal.prolong_lifetime(sender=sealing_committee)
@@ -165,7 +166,7 @@ def test_prolong_in_window_at_the_end(networks, gate_seal, sealing_committee):
 
 def test_cannot_prolong_twice(networks, gate_seal, sealing_committee):
     window_start = gate_seal.get_prolongation_window_start()
-    networks.active_provider.set_timestamp(window_start + 1)
+    networks.active_provider.set_timestamp(window_start)
     networks.active_provider.mine()
 
     assert gate_seal.is_in_prolongation_window()
@@ -188,7 +189,7 @@ def test_seal_under_invalid_committee(gate_seal, stranger):
 
 def test_prolong_after_natural_expiry_reverts(networks, gate_seal, sealing_committee):
     expiry_timestamp = gate_seal.get_expiry_timestamp()
-    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    networks.active_provider.set_timestamp(expiry_timestamp)
     networks.active_provider.mine()
 
     assert gate_seal.is_expired()
@@ -202,7 +203,7 @@ def test_prolong_after_natural_expiry_reverts(networks, gate_seal, sealing_commi
 
 def test_seal_after_expiry_reverts(networks, gate_seal, sealing_committee):
     expiry_timestamp = gate_seal.get_expiry_timestamp()
-    networks.active_provider.set_timestamp(expiry_timestamp + 1)
+    networks.active_provider.set_timestamp(expiry_timestamp)
     networks.active_provider.mine()
 
     assert gate_seal.is_expired()
