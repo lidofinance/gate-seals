@@ -141,7 +141,7 @@ def test_prolong_in_window_at_the_start(networks, gate_seal, sealing_committee):
     expiry = gate_seal.get_expiry_timestamp()
     prolongations_remaining = gate_seal.get_prolongations_remaining()
     prolongation_period = gate_seal.get_prolongation_period_seconds()
-    networks.active_provider.set_timestamp(window_start + 1)
+    networks.active_provider.set_timestamp(window_start)
     networks.active_provider.mine()
     assert gate_seal.is_in_prolongation_window()
     tx = gate_seal.prolong_lifetime(sender=sealing_committee)

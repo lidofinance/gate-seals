@@ -16,8 +16,9 @@ To put such crucial components of the Lido protocol as `WithdrawalQueue` and `Va
 Each GateSeal is operated by a committee, essentially a multisig account responsible for pulling the brake in case things go awry. However, authorizing a committee to pause/resume the protocol withdrawals would be utterly reckless which is why GateSeals have a number of safeguards in place:
 - each GateSeal can only be activated once and becomes unusable immediately after,
 - each GateSeal can only be activated within its expiry period and becomes unusable past its expiry timestamp even if it was never triggered,
-- each GateSeal’s immutable parameters (e.g., the pause duration) are specified by Tech and Analytics contributors and verified after deployment by internal and external auditors,
-- each GateSeal can only be prolonged by the sealing committee.
+- each GateSeal's immutable parameters (e.g., the pause duration) are specified by Tech and Analytics contributors and verified after deployment by internal and external auditors,
+- each GateSeal can only be prolonged by the sealing committee,
+- the total lifetime of a GateSeal across all prolongations is capped at 5 years maximum.
 
 
 Thus, the biggest damage a compromised GateSeal multisig can inflict is to pause withdrawals for the configured duration, given the DAO does not resume withdrawals sooner via governance.
@@ -41,8 +42,6 @@ Important to note, that GateSeal does not bypass the access control settings for
 
 ## How are GateSeals created?
 GateSealV2 is created using the GateSealFactoryV2. The factory uses the blueprint pattern whereby new GateSealV2 is deployed using the initcode (blueprint) stored onchain. The blueprint is essentially a broken GateSealV2 that can only be used to create new GateSealV2.
-
-While Vyper offers other ways to create new contracts, we opted to use the blueprint pattern because it creates a fully autonomous contract without any dependencies. Unlike other contract-creating functions, [`create_from_blueprint`](https://docs.vyperlang.org/en/stable/built-in-functions.html#chain-interaction) invokes the constructor of the contract, thus, helping avoid the initialization shenanigans.
 
 While Vyper offers other ways to create new contracts, we opted to use the blueprint pattern because it creates a fully autonomous contract without any dependencies. Unlike other contract-creating functions, [`create_from_blueprint`](https://docs.vyperlang.org/en/stable/built-in-functions.html#chain-interaction) invokes the constructor of the contract, thus, helping avoid the initialization shenanigans.
 
