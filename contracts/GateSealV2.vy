@@ -57,9 +57,9 @@ PROLONGATION_WINDOW_SECONDS: immutable(uint256)
 PRE_EXPIRATION_OFFSET: immutable(uint256)
 
 
-# Total lifetime across all prolongations is capped at five years
-TOTAL_LIFETIME_DAYS: constant(uint256) = 365 * 5
-TOTAL_LIFETIME_SECONDS: constant(uint256) = SECONDS_PER_DAY * TOTAL_LIFETIME_DAYS
+# Maximum lifetime across all prolongations is capped at five years
+MAX_LIFETIME_DAYS: constant(uint256) = 365 * 5
+MAX_LIFETIME_SECONDS: constant(uint256) = SECONDS_PER_DAY * MAX_LIFETIME_DAYS
 
 # NOTE: GateSeal V2 does not enforce any limits on the seal duration.
 # The DAO is expected to choose a sensible value during deployment and
@@ -119,7 +119,7 @@ def __init__(
     lifetime_seconds: uint256 = _expiry_timestamp - block.timestamp
     assert lifetime_seconds >= min_prolongation_extension_seconds, "expiry timestamp: below minimum"
     assert lifetime_seconds <= max_lifetime_seconds, "expiry timestamp: exceeds max"
-    assert lifetime_seconds + PROLONGATION_EXTENSION_SECONDS * _prolongation_limit <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
+    assert lifetime_seconds + PROLONGATION_EXTENSION_SECONDS * _prolongation_limit <= MAX_LIFETIME_SECONDS, "max lifetime: exceeded"
     assert _seal_duration_seconds > 0, "seal duration: must be positive"
     
     for sealable: address in _sealables:

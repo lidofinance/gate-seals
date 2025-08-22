@@ -18,7 +18,7 @@ Each GateSeal is operated by a committee, essentially a multisig account respons
 - each GateSeal can only be activated within its expiry period and becomes unusable past its expiry timestamp even if it was never triggered,
 - each GateSeal's immutable parameters (e.g., the pause duration) are specified by Tech and Analytics contributors and verified after deployment by internal and external auditors,
 - each GateSeal can only be prolonged by the sealing committee,
-- the total lifetime of a GateSeal across all prolongations is capped at 5 years maximum.
+- the maximum lifetime of a GateSeal across all prolongations is capped at 5 years.
 
 
 Thus, the biggest damage a compromised GateSeal multisig can inflict is to pause withdrawals for the configured duration, given the DAO does not resume withdrawals sooner via governance.

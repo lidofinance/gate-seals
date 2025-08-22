@@ -3,7 +3,7 @@ from ape.exceptions import VirtualMachineError
 from ape.utils import ZERO_ADDRESS
 from utils.constants import (
     MAX_SEALABLES,
-    TOTAL_LIFETIME_SECONDS,
+    MAX_LIFETIME_SECONDS,
     SECONDS_PER_DAY,
 )
 from .conftest import (
@@ -68,13 +68,13 @@ def test_deploy_fails_with_prolongation_extension_too_short(deploy_gate_seal, no
 def test_deploy_fails_with_prolongation_limit_too_high(deploy_gate_seal, now):
     prolongation_limit = 5
     expiry_offset_seconds = PROLONGATION_EXTENSION_SECONDS + SECONDS_PER_DAY
-    calculated_total_lifetime = (
+    calculated_max_lifetime = (
         expiry_offset_seconds + PROLONGATION_EXTENSION_SECONDS * prolongation_limit
     )
     assert (
-        calculated_total_lifetime > TOTAL_LIFETIME_SECONDS
-    ), "calculated total lifetime should exceed maximum"
-    with pytest.raises(VirtualMachineError, match="total lifetime: exceeds max"):
+        calculated_max_lifetime > MAX_LIFETIME_SECONDS
+    ), "calculated max lifetime should exceed maximum"
+    with pytest.raises(VirtualMachineError, match="max lifetime: exceeded"):
         deploy_gate_seal(
             prolongation_limit_=prolongation_limit,
             expiry_timestamp_=now() + expiry_offset_seconds,

@@ -1,7 +1,7 @@
 from ape import chain
 from utils.blueprint import deploy_blueprint, construct_blueprint_deploy_bytecode
 from utils.constants import (
-    TOTAL_LIFETIME_SECONDS,
+    MAX_LIFETIME_SECONDS,
     SECONDS_PER_DAY,
 )
 from .conftest import (
@@ -50,7 +50,7 @@ def test_happy_path(project, accounts):
     ), f"Lifetime {lifetime} is below minimum {MIN_EXPIRY_OFFSET_SECONDS}"
 
     PROLONGATION_LIMIT = (
-        TOTAL_LIFETIME_SECONDS - lifetime
+        MAX_LIFETIME_SECONDS - lifetime
     ) // PROLONGATION_EXTENSION_SECONDS
 
     # Step 6. Create a GateSealV2 using the factory
