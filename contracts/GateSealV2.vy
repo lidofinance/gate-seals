@@ -46,11 +46,11 @@ SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 MAX_SEALABLES: constant(uint256) = 10
 
 # === PROLONGATION SYSTEM ===
-# Each prolongation extends the GateSeal by the provided period.
-PROLONGATION_PERIOD_SECONDS: immutable(uint256)
+# Each prolongation extends the GateSeal by the provided extension.
+PROLONGATION_EXTENSION_SECONDS: immutable(uint256)
 
 # Timeline: Now → [PROLONGATION_WINDOW] → [PRE_EXPIRATION_OFFSET] → Expiry
-# PROLONGATION_WINDOW is the period during which the committee can prolong
+# PROLONGATION_WINDOW is the time window during which the committee can prolong
 PROLONGATION_WINDOW_SECONDS: immutable(uint256)
 
 # PRE_EXPIRATION_OFFSET ensures the DAO can deploy a new GateSeal if prolongation fails
@@ -85,7 +85,7 @@ sealables: DynArray[address, MAX_SEALABLES]
 # Absolute unix timestamp when the current GateSeal lifetime ends unless it is prolonged.
 # Before sealing, this value determines the prolongation window bounds
 # (see get_prolongation_window_start/end) and the moment when the GateSeal expires.
-# Each successful prolongation increases this value by PROLONGATION_PERIOD_SECONDS.
+# Each successful prolongation increases this value by PROLONGATION_EXTENSION_SECONDS.
 # On sealing, this value is set to the current block timestamp to expire the GateSeal
 # immediately and prevent any further operations. After expiry, a new GateSeal must be set up.
 expiry_timestamp: uint256
@@ -100,26 +100,26 @@ def __init__(
     _sealables: DynArray[address, MAX_SEALABLES],
     _expiry_timestamp: uint256,
     _prolongation_limit: uint256,
-    _prolongation_period_seconds: uint256,
+    _prolongation_extension_seconds: uint256,
     _prolongation_window_seconds: uint256,
     _pre_expiration_offset: uint256,
 ):
     assert _sealing_committee != empty(address), "sealing committee: zero address"
     assert len(_sealables) > 0, "sealables: empty list"
 
-    min_prolongation_period_seconds: uint256 = _prolongation_window_seconds + _pre_expiration_offset
-    max_lifetime_seconds: uint256 = _prolongation_period_seconds * 2
+    min_prolongation_extension_seconds: uint256 = _prolongation_window_seconds + _pre_expiration_offset
+    max_lifetime_seconds: uint256 = _prolongation_extension_seconds * 2
 
-    assert _prolongation_period_seconds >= min_prolongation_period_seconds, "prolongation period: below minimum"
+    assert _prolongation_extension_seconds >= min_prolongation_extension_seconds, "prolongation extension: below minimum"
     
-    PROLONGATION_PERIOD_SECONDS = _prolongation_period_seconds
+    PROLONGATION_EXTENSION_SECONDS = _prolongation_extension_seconds
     PROLONGATION_WINDOW_SECONDS = _prolongation_window_seconds
     PRE_EXPIRATION_OFFSET = _pre_expiration_offset
     assert _expiry_timestamp >= block.timestamp, "expiry timestamp: must be in the future"
     lifetime_seconds: uint256 = _expiry_timestamp - block.timestamp
-    assert lifetime_seconds >= min_prolongation_period_seconds, "expiry timestamp: below minimum"
+    assert lifetime_seconds >= min_prolongation_extension_seconds, "expiry timestamp: below minimum"
     assert lifetime_seconds <= max_lifetime_seconds, "expiry timestamp: exceeds max"
-    assert lifetime_seconds + PROLONGATION_PERIOD_SECONDS * _prolongation_limit <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
+    assert lifetime_seconds + PROLONGATION_EXTENSION_SECONDS * _prolongation_limit <= TOTAL_LIFETIME_SECONDS, "total lifetime: exceeds max"
     assert _seal_duration_seconds > 0, "seal duration: must be positive"
     
     for sealable: address in _sealables:
@@ -154,8 +154,8 @@ def get_sealables() -> DynArray[address, MAX_SEALABLES]:
 
 @external
 @view
-def get_prolongation_period_seconds() -> uint256:
-    return PROLONGATION_PERIOD_SECONDS
+def get_prolongation_extension_seconds() -> uint256:
+    return PROLONGATION_EXTENSION_SECONDS
 
 
 @external
@@ -225,7 +225,7 @@ def prolong_lifetime():
     assert self.prolongations_remaining > 0, "prolongations: exhausted"
     assert self._is_in_prolongation_window(), "prolongation window: not active"
 
-    self.expiry_timestamp += PROLONGATION_PERIOD_SECONDS
+    self.expiry_timestamp += PROLONGATION_EXTENSION_SECONDS
     self.prolongations_remaining -= 1
     log Prolonged(
         prolonged_by=SEALING_COMMITTEE,

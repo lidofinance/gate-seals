@@ -34,7 +34,7 @@ A GateSeal is set up with an immutable configuration at the time of construction
 - the sealables, a list of contracts to be sealed,
 - the expiry timestamp after which the GateSeal expires unless prolonged,
 - the prolongation limit, the maximum number of allowed prolongations,
-- the prolongation period, the extra time added to the contract with each prolongation,
+- the prolongation extension, the extra time added to the contract with each prolongation,
 - the prolongation window, the active window during which the committee can prolong the contract,
 - the pre-expiration offset, the time buffer for DAO Ops to deploy a new GateSeal before the current one expires.
 
@@ -153,7 +153,7 @@ ape run scripts/deploy_factory.py
  - `SEALABLES` - a comma-separated list of pausable contracts;
  - `EXPIRY_TIMESTAMP` - unix timestamp when the GateSeal expires;
  - `PROLONGATION_LIMIT` - prolongation limit;
- - `PROLONGATION_PERIOD_SECONDS` – prolongation period in seconds;
+ - `PROLONGATION_EXTENSION_SECONDS` – prolongation extension in seconds;
  - `PROLONGATION_WINDOW_SECONDS` – prolongation window in seconds;
  - `PRE_EXPIRATION_OFFSET` – prolongation window end offset before the expiration.
 

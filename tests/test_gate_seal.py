@@ -8,7 +8,7 @@ from utils.constants import (
 )
 from .conftest import (
     MIN_EXPIRY_OFFSET_SECONDS,
-    PROLONGATION_PERIOD_SECONDS,
+    PROLONGATION_EXTENSION_SECONDS,
     PRE_EXPIRATION_OFFSET,
     PROLONGATION_WINDOW_SECONDS,
 )
@@ -49,25 +49,27 @@ def test_deploy_fails_with_expiry_too_early(deploy_gate_seal, now):
 
 
 def test_deploy_fails_with_too_long_expiry_offset(deploy_gate_seal, now):
-    excessive_expiry_offset = PROLONGATION_PERIOD_SECONDS * 2 + 10
+    excessive_expiry_offset = PROLONGATION_EXTENSION_SECONDS * 2 + 10
     with pytest.raises(VirtualMachineError, match="expiry timestamp: exceeds max"):
         deploy_gate_seal(expiry_timestamp_=now() + excessive_expiry_offset)
 
 
-def test_deploy_fails_with_prolongation_period_too_short(deploy_gate_seal, now):
-    too_short_period = PROLONGATION_WINDOW_SECONDS + PRE_EXPIRATION_OFFSET - 1
-    with pytest.raises(VirtualMachineError, match="prolongation period: below minimum"):
+def test_deploy_fails_with_prolongation_extension_too_short(deploy_gate_seal, now):
+    too_short_extension = PROLONGATION_WINDOW_SECONDS + PRE_EXPIRATION_OFFSET - 1
+    with pytest.raises(
+        VirtualMachineError, match="prolongation extension: below minimum"
+    ):
         deploy_gate_seal(
             expiry_timestamp_=now() + MIN_EXPIRY_OFFSET_SECONDS,
-            prolongation_period_seconds_=too_short_period,
+            prolongation_extension_seconds_=too_short_extension,
         )
 
 
 def test_deploy_fails_with_prolongation_limit_too_high(deploy_gate_seal, now):
     prolongation_limit = 5
-    expiry_offset_seconds = PROLONGATION_PERIOD_SECONDS + SECONDS_PER_DAY
+    expiry_offset_seconds = PROLONGATION_EXTENSION_SECONDS + SECONDS_PER_DAY
     calculated_total_lifetime = (
-        expiry_offset_seconds + PROLONGATION_PERIOD_SECONDS * prolongation_limit
+        expiry_offset_seconds + PROLONGATION_EXTENSION_SECONDS * prolongation_limit
     )
     assert (
         calculated_total_lifetime > TOTAL_LIFETIME_SECONDS
@@ -140,7 +142,7 @@ def test_prolong_in_window_at_the_start(networks, gate_seal, sealing_committee):
     window_start = gate_seal.get_prolongation_window_start()
     expiry = gate_seal.get_expiry_timestamp()
     prolongations_remaining = gate_seal.get_prolongations_remaining()
-    prolongation_period = gate_seal.get_prolongation_period_seconds()
+    prolongation_extension = gate_seal.get_prolongation_extension_seconds()
     networks.active_provider.set_timestamp(window_start)
     networks.active_provider.mine()
     assert gate_seal.is_in_prolongation_window()
@@ -148,9 +150,9 @@ def test_prolong_in_window_at_the_start(networks, gate_seal, sealing_committee):
     assert not gate_seal.is_in_prolongation_window()
     assert tx.events[0].prolonged_by == sealing_committee
     assert tx.events[0].prolongations_remaining == prolongations_remaining - 1
-    assert tx.events[0].new_expiry == expiry + prolongation_period
+    assert tx.events[0].new_expiry == expiry + prolongation_extension
 
-    assert gate_seal.get_expiry_timestamp() == expiry + prolongation_period
+    assert gate_seal.get_expiry_timestamp() == expiry + prolongation_extension
     assert gate_seal.get_prolongations_remaining() == prolongations_remaining - 1
 
 
@@ -213,7 +215,9 @@ def test_seal_after_expiry_reverts(networks, gate_seal, sealing_committee):
 
 
 def test_gate_seal_stores_immutables(gate_seal, sealables, sealing_committee):
-    assert gate_seal.get_prolongation_period_seconds() == PROLONGATION_PERIOD_SECONDS
+    assert (
+        gate_seal.get_prolongation_extension_seconds() == PROLONGATION_EXTENSION_SECONDS
+    )
     assert gate_seal.get_prolongation_window_seconds() == PROLONGATION_WINDOW_SECONDS
     assert gate_seal.get_pre_expiration_offset() == PRE_EXPIRATION_OFFSET
     assert gate_seal.get_sealing_committee() == sealing_committee

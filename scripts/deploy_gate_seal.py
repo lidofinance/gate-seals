@@ -20,7 +20,9 @@ def main():
     sealables = load_env_variable("SEALABLES").split(",")
     expiry_timestamp = int(load_env_variable("EXPIRY_TIMESTAMP"))
     prolongation_limit = int(load_env_variable("PROLONGATION_LIMIT"))
-    prolongation_period_seconds = int(load_env_variable("PROLONGATION_PERIOD_SECONDS"))
+    prolongation_extension_seconds = int(
+        load_env_variable("PROLONGATION_EXTENSION_SECONDS")
+    )
     prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
     pre_expiration_offset = int(load_env_variable("PRE_EXPIRATION_OFFSET"))
 
@@ -34,7 +36,7 @@ def main():
         sealables,
         expiry_timestamp,
         prolongation_limit,
-        prolongation_period_seconds,
+        prolongation_extension_seconds,
         prolongation_window_seconds,
         pre_expiration_offset,
         sender=deployer,
@@ -61,7 +63,7 @@ def main():
                         "sealables": sealables,
                         "expiry_timestamp": expiry_timestamp,
                         "prolongation_limit": prolongation_limit,
-                        "prolongation_period_seconds": prolongation_period_seconds,
+                        "prolongation_extension_seconds": prolongation_extension_seconds,
                         "prolongation_window_seconds": prolongation_window_seconds,
                         "pre_expiration_offset": pre_expiration_offset,
                     },

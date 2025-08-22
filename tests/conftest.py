@@ -8,7 +8,7 @@ from utils.constants import (
 )
 
 # Default parameters for contracts under test
-PROLONGATION_PERIOD_SECONDS = SECONDS_PER_DAY * 365
+PROLONGATION_EXTENSION_SECONDS = SECONDS_PER_DAY * 365
 PROLONGATION_WINDOW_SECONDS = SECONDS_PER_DAY * 14
 PRE_EXPIRATION_OFFSET = SECONDS_PER_DAY * 60
 MIN_EXPIRY_OFFSET_SECONDS = PROLONGATION_WINDOW_SECONDS + PRE_EXPIRATION_OFFSET
@@ -76,7 +76,7 @@ def gate_seal(
         sealables,
         expiry_timestamp,
         prolongation_limit,
-        PROLONGATION_PERIOD_SECONDS,
+        PROLONGATION_EXTENSION_SECONDS,
         PROLONGATION_WINDOW_SECONDS,
         PRE_EXPIRATION_OFFSET,
         sender=deployer,
@@ -174,7 +174,7 @@ def deploy_gate_seal(
         sealables_=None,
         expiry_timestamp_=None,
         prolongation_limit_=None,
-        prolongation_period_seconds_=None,
+        prolongation_extension_seconds_=None,
         prolongation_window_seconds_=None,
         pre_expiration_offset_=None,
         sender=None,
@@ -199,10 +199,10 @@ def deploy_gate_seal(
             if prolongation_limit_ is not None
             else prolongation_limit
         )
-        final_prolongation_period = (
-            prolongation_period_seconds_
-            if prolongation_period_seconds_ is not None
-            else PROLONGATION_PERIOD_SECONDS
+        final_prolongation_extension = (
+            prolongation_extension_seconds_
+            if prolongation_extension_seconds_ is not None
+            else PROLONGATION_EXTENSION_SECONDS
         )
         final_prolongation_window = (
             prolongation_window_seconds_
@@ -222,7 +222,7 @@ def deploy_gate_seal(
             final_sealables,
             final_expiry,
             final_prolongation_limit,
-            final_prolongation_period,
+            final_prolongation_extension,
             final_prolongation_window,
             final_pre_expiration_offset,
             sender=final_sender,

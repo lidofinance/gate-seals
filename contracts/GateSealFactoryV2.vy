@@ -54,7 +54,7 @@ def create_gate_seal(
     _sealables: DynArray[address, MAX_SEALABLES],
     _expiry_timestamp: uint256,
     _prolongation_limit: uint256,
-    _prolongation_period_seconds: uint256,
+    _prolongation_extension_seconds: uint256,
     _prolongation_window_seconds: uint256,
     _pre_expiration_offset: uint256,
 ):
@@ -66,7 +66,7 @@ def create_gate_seal(
     @param _sealables addresses of pausable contracts
     @param _expiry_timestamp unix timestamp when the GateSeal will naturally expire
     @param _prolongation_limit number of available prolongations
-    @param _prolongation_period_seconds prolongation period in seconds
+    @param _prolongation_extension_seconds prolongation extension in seconds
     @param _prolongation_window_seconds prolongation window in seconds
     @param _pre_expiration_offset prolongation window end offset before the expiration
     """
@@ -77,7 +77,7 @@ def create_gate_seal(
         _sealables,
         _expiry_timestamp,
         _prolongation_limit,
-        _prolongation_period_seconds,
+        _prolongation_extension_seconds,
         _prolongation_window_seconds,
         _pre_expiration_offset,
         code_offset=EIP5202_CODE_OFFSET,

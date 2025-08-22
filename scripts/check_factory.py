@@ -32,10 +32,12 @@ def main():
     sealing_committee = deployer
     seal_duration_seconds = 60 * 60 * 24 * 7  # week
     sealables = [sealable.address]
-    prolongation_period_seconds = int(load_env_variable("PROLONGATION_PERIOD_SECONDS"))
+    prolongation_extension_seconds = int(
+        load_env_variable("PROLONGATION_EXTENSION_SECONDS")
+    )
     prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
     pre_expiration_offset = int(load_env_variable("PRE_EXPIRATION_OFFSET"))
-    expiry_timestamp = chain.pending_timestamp + prolongation_period_seconds
+    expiry_timestamp = chain.pending_timestamp + prolongation_extension_seconds
     prolongation_limit = 3
 
     tx = factory.create_gate_seal(
@@ -44,7 +46,7 @@ def main():
         sealables,
         expiry_timestamp,
         prolongation_limit,
-        prolongation_period_seconds,
+        prolongation_extension_seconds,
         prolongation_window_seconds,
         pre_expiration_offset,
         sender=deployer,
@@ -61,8 +63,10 @@ def main():
     logger.success("Expiry timestamp matches")
     assert gate_seal.get_prolongations_remaining() == prolongation_limit
     logger.success("Prolongations remaining matches")
-    assert gate_seal.get_prolongation_period_seconds() == prolongation_period_seconds
-    logger.success("Prolongation period matches")
+    assert (
+        gate_seal.get_prolongation_extension_seconds() == prolongation_extension_seconds
+    )
+    logger.success("Prolongation extension matches")
     assert gate_seal.get_prolongation_window_seconds() == prolongation_window_seconds
     logger.success("Prolongation window matches")
     assert gate_seal.get_pre_expiration_offset() == pre_expiration_offset

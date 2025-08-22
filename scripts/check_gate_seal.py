@@ -38,10 +38,10 @@ def main():
     assert gate_seal.get_expiry_timestamp() == params["expiry_timestamp"]
     logger.success("expiry_timestamp matches!")
     assert (
-        gate_seal.get_prolongation_period_seconds()
-        == params["prolongation_period_seconds"]
+        gate_seal.get_prolongation_extension_seconds()
+        == params["prolongation_extension_seconds"]
     )
-    logger.success("prolongation_period_seconds matches!")
+    logger.success("prolongation_extension_seconds matches!")
     assert (
         gate_seal.get_prolongation_window_seconds()
         == params["prolongation_window_seconds"]

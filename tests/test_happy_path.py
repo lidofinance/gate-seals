@@ -5,7 +5,7 @@ from utils.constants import (
     SECONDS_PER_DAY,
 )
 from .conftest import (
-    PROLONGATION_PERIOD_SECONDS,
+    PROLONGATION_EXTENSION_SECONDS,
     MIN_EXPIRY_OFFSET_SECONDS,
     PROLONGATION_WINDOW_SECONDS,
     PRE_EXPIRATION_OFFSET,
@@ -42,7 +42,7 @@ def test_happy_path(project, accounts):
     for _ in range(8):
         SEALABLES.append(project.SealableMock.deploy(False, False, sender=DEPLOYER))
 
-    EXPIRY_TIMESTAMP = chain.pending_timestamp + PROLONGATION_PERIOD_SECONDS + 100
+    EXPIRY_TIMESTAMP = chain.pending_timestamp + PROLONGATION_EXTENSION_SECONDS + 100
 
     lifetime = EXPIRY_TIMESTAMP - chain.pending_timestamp
     assert (
@@ -51,7 +51,7 @@ def test_happy_path(project, accounts):
 
     PROLONGATION_LIMIT = (
         TOTAL_LIFETIME_SECONDS - lifetime
-    ) // PROLONGATION_PERIOD_SECONDS
+    ) // PROLONGATION_EXTENSION_SECONDS
 
     # Step 6. Create a GateSealV2 using the factory
     transaction = gate_seal_factory.create_gate_seal(
@@ -60,7 +60,7 @@ def test_happy_path(project, accounts):
         SEALABLES,
         EXPIRY_TIMESTAMP,
         PROLONGATION_LIMIT,
-        PROLONGATION_PERIOD_SECONDS,
+        PROLONGATION_EXTENSION_SECONDS,
         PROLONGATION_WINDOW_SECONDS,
         PRE_EXPIRATION_OFFSET,
         sender=DEPLOYER,
