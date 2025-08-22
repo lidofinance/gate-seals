@@ -240,7 +240,7 @@ def seal_all():
     @notice Seal all the sealables.
     @dev    Immediately expires GateSeal and, thus, can only be called once.
     """
-    self._seal_implementation(self.sealables)
+    self._seal(self.sealables)
 
 @external
 def seal_some(_sealables: DynArray[address, MAX_SEALABLES]):
@@ -252,10 +252,10 @@ def seal_some(_sealables: DynArray[address, MAX_SEALABLES]):
     assert not self._has_duplicates(_sealables), "sealables: includes duplicates"
     for sealable: address in _sealables:
         assert sealable in self.sealables, "sealables: includes a non-sealable"
-    self._seal_implementation(_sealables)
+    self._seal(_sealables)
 
 @internal
-def _seal_implementation(_sealables: DynArray[address, MAX_SEALABLES]):
+def _seal(_sealables: DynArray[address, MAX_SEALABLES]):
     assert msg.sender == SEALING_COMMITTEE, "sender: not SEALING_COMMITTEE"
     assert not self._is_expired(), "GateSeal: expired"
 
