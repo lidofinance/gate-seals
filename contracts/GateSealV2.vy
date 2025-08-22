@@ -42,8 +42,7 @@ SECONDS_PER_DAY: constant(uint256) = 60 * 60 * 24
 
 # === SEALABLE CONTRACTS LIMITS ===
 # The maximum number of sealables is 10.
-# GateSeals were originally designed to pause WithdrawalQueue and ValidatorExitBus,
-# however, there is a non-zero chance that there might be more in the future.
+# DynArray requires a compile-time limit, and 10 provides sufficient sealable count.
 MAX_SEALABLES: constant(uint256) = 10
 
 # === PROLONGATION SYSTEM ===
