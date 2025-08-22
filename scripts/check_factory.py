@@ -36,7 +36,7 @@ def main():
         load_env_variable("PROLONGATION_EXTENSION_SECONDS")
     )
     prolongation_window_seconds = int(load_env_variable("PROLONGATION_WINDOW_SECONDS"))
-    pre_expiration_offset = int(load_env_variable("PRE_EXPIRATION_OFFSET"))
+    expiration_buffer_seconds = int(load_env_variable("EXPIRATION_BUFFER_SECONDS"))
     expiry_timestamp = chain.pending_timestamp + prolongation_extension_seconds
     prolongation_limit = 3
 
@@ -48,7 +48,7 @@ def main():
         prolongation_limit,
         prolongation_extension_seconds,
         prolongation_window_seconds,
-        pre_expiration_offset,
+        expiration_buffer_seconds,
         sender=deployer,
     )
     logger.success("GateSeal deployed!")
@@ -69,8 +69,8 @@ def main():
     logger.success("Prolongation extension matches")
     assert gate_seal.get_prolongation_window_seconds() == prolongation_window_seconds
     logger.success("Prolongation window matches")
-    assert gate_seal.get_pre_expiration_offset() == pre_expiration_offset
-    logger.success("pre-expiration offset matches")
+    assert gate_seal.get_expiration_buffer_seconds() == expiration_buffer_seconds
+    logger.success("expiration buffer matches")
 
     logger.info("Sealing...")
     assert not sealable.isPaused()

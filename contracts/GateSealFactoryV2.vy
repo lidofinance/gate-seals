@@ -56,7 +56,7 @@ def create_gate_seal(
     _prolongation_limit: uint256,
     _prolongation_extension_seconds: uint256,
     _prolongation_window_seconds: uint256,
-    _pre_expiration_offset: uint256,
+    _expiration_buffer_seconds: uint256,
 ):
     """
     @notice Create a new GateSeal.
@@ -68,7 +68,7 @@ def create_gate_seal(
     @param _prolongation_limit number of available prolongations
     @param _prolongation_extension_seconds prolongation extension in seconds
     @param _prolongation_window_seconds prolongation window in seconds
-    @param _pre_expiration_offset prolongation window end offset before the expiration
+    @param _expiration_buffer_seconds time buffer before expiration for DAO deployment
     """
     gate_seal: address = create_from_blueprint(
         BLUEPRINT,
@@ -79,7 +79,7 @@ def create_gate_seal(
         _prolongation_limit,
         _prolongation_extension_seconds,
         _prolongation_window_seconds,
-        _pre_expiration_offset,
+        _expiration_buffer_seconds,
         code_offset=EIP5202_CODE_OFFSET,
     )
 

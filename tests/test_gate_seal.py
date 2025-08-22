@@ -9,7 +9,7 @@ from utils.constants import (
 from .conftest import (
     MIN_EXPIRY_OFFSET_SECONDS,
     PROLONGATION_EXTENSION_SECONDS,
-    PRE_EXPIRATION_OFFSET,
+    EXPIRATION_BUFFER_SECONDS,
     PROLONGATION_WINDOW_SECONDS,
 )
 
@@ -55,7 +55,7 @@ def test_deploy_fails_with_too_long_expiry_offset(deploy_gate_seal, now):
 
 
 def test_deploy_fails_with_prolongation_extension_too_short(deploy_gate_seal, now):
-    too_short_extension = PROLONGATION_WINDOW_SECONDS + PRE_EXPIRATION_OFFSET - 1
+    too_short_extension = PROLONGATION_WINDOW_SECONDS + EXPIRATION_BUFFER_SECONDS - 1
     with pytest.raises(
         VirtualMachineError, match="prolongation extension: below minimum"
     ):
@@ -219,7 +219,7 @@ def test_gate_seal_stores_immutables(gate_seal, sealables, sealing_committee):
         gate_seal.get_prolongation_extension_seconds() == PROLONGATION_EXTENSION_SECONDS
     )
     assert gate_seal.get_prolongation_window_seconds() == PROLONGATION_WINDOW_SECONDS
-    assert gate_seal.get_pre_expiration_offset() == PRE_EXPIRATION_OFFSET
+    assert gate_seal.get_expiration_buffer_seconds() == EXPIRATION_BUFFER_SECONDS
     assert gate_seal.get_sealing_committee() == sealing_committee
     assert gate_seal.get_sealables() == sealables
 

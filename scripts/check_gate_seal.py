@@ -47,8 +47,10 @@ def main():
         == params["prolongation_window_seconds"]
     )
     logger.success("prolongation_window_seconds matches!")
-    assert gate_seal.get_pre_expiration_offset() == params["pre_expiration_offset"]
-    logger.success("pre_expiration_offset matches!")
+    assert (
+        gate_seal.get_expiration_buffer_seconds() == params["expiration_buffer_seconds"]
+    )
+    logger.success("expiration_buffer_seconds matches!")
 
     # simulating GateSeal flow
     logger.info("simulating GateSeal flow")

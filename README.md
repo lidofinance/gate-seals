@@ -36,7 +36,7 @@ A GateSeal is set up with an immutable configuration at the time of construction
 - the prolongation limit, the maximum number of allowed prolongations,
 - the prolongation extension, the extra time added to the contract with each prolongation,
 - the prolongation window, the active window during which the committee can prolong the contract,
-- the pre-expiration offset, the time buffer for DAO Ops to deploy a new GateSeal before the current one expires.
+- the expiration buffer, the time buffer for DAO Ops to deploy a new GateSeal before the current one expires.
 
 Important to note, that GateSeal does not bypass the access control settings for pausable contracts, which is why GateSeal must be given the appropriate permissions beforehand. If the seal has not yet been triggered and has not expired, the sealing committee can call `prolong_lifetime` to extend the lifetime using one of the remaining prolongations. In an emergency the sealing committee simply calls `seal_all` or `seal_some` to immediately pause all configured sealables and expire the GateSeal.
 
@@ -155,7 +155,7 @@ ape run scripts/deploy_factory.py
  - `PROLONGATION_LIMIT` - prolongation limit;
  - `PROLONGATION_EXTENSION_SECONDS` – prolongation extension in seconds;
  - `PROLONGATION_WINDOW_SECONDS` – prolongation window in seconds;
- - `PRE_EXPIRATION_OFFSET` – prolongation window end offset before the expiration.
+ - `EXPIRATION_BUFFER_SECONDS` – time buffer before expiration for DAO deployment.
 
 4. Deploy the GateSeal using the deployed factory
 ```shell
