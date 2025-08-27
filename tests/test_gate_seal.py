@@ -322,3 +322,97 @@ def test_seal_some_with_non_sealable(gate_seal, sealing_committee, stranger):
     non_sealable = [stranger.address]
     with pytest.raises(VirtualMachineError, match="sealables: includes a non-sealable"):
         gate_seal.seal_some(non_sealable, sender=sealing_committee)
+
+
+def _assert_all_view_functions_work(gate_seal, sealing_committee, sealables):
+    assert gate_seal.get_sealing_committee() == sealing_committee
+    assert gate_seal.get_sealables() == sealables
+    assert gate_seal.get_seal_duration_seconds() > 0
+    assert gate_seal.get_prolongation_extension_seconds() > 0
+    assert gate_seal.get_prolongation_window_seconds() > 0
+    assert gate_seal.get_expiration_buffer_seconds() > 0
+    assert gate_seal.get_expiry_timestamp() > 0
+    assert gate_seal.get_prolongations_remaining() >= 0
+    assert gate_seal.get_prolongation_window_start() == 0
+    assert gate_seal.get_prolongation_window_end() == 0
+
+
+def test_view_functions_after_sealing(project, sealing_committee, sealables, gate_seal):
+    gate_seal.seal_all(sender=sealing_committee)
+    assert gate_seal.is_expired()
+    _assert_all_view_functions_work(gate_seal, sealing_committee, sealables)
+
+
+def test_view_functions_after_natural_expiry(
+    networks, gate_seal, sealables, sealing_committee
+):
+    expiry_timestamp = gate_seal.get_expiry_timestamp()
+    networks.active_provider.set_timestamp(expiry_timestamp)
+    networks.active_provider.mine()
+    assert gate_seal.is_expired()
+    _assert_all_view_functions_work(gate_seal, sealing_committee, sealables)
+
+
+def test_multiple_prolongations_with_limit_greater_than_one(
+    networks, deploy_gate_seal, sealing_committee, now
+):
+    gate_seal = deploy_gate_seal(prolongation_limit_=2)
+    initial_expiry = gate_seal.get_expiry_timestamp()
+    initial_prolongations = gate_seal.get_prolongations_remaining()
+    window_start = gate_seal.get_prolongation_window_start()
+    networks.active_provider.set_timestamp(window_start)
+    networks.active_provider.mine()
+    gate_seal.prolong_lifetime(sender=sealing_committee)
+    assert gate_seal.get_prolongations_remaining() == initial_prolongations - 1
+    assert (
+        gate_seal.get_expiry_timestamp()
+        == initial_expiry + gate_seal.get_prolongation_extension_seconds()
+    )
+    new_window_start = gate_seal.get_prolongation_window_start()
+    networks.active_provider.set_timestamp(new_window_start)
+    networks.active_provider.mine()
+    assert gate_seal.is_in_prolongation_window()
+    gate_seal.prolong_lifetime(sender=sealing_committee)
+    assert gate_seal.get_prolongations_remaining() == 0
+    assert (
+        gate_seal.get_expiry_timestamp()
+        == initial_expiry + gate_seal.get_prolongation_extension_seconds() * 2
+    )
+
+
+def test_prolongation_window_reopens_after_prolongation(
+    networks, gate_seal, sealing_committee
+):
+    initial_expiry = gate_seal.get_expiry_timestamp()
+    prolongation_extension = gate_seal.get_prolongation_extension_seconds()
+    window_start = gate_seal.get_prolongation_window_start()
+    networks.active_provider.set_timestamp(window_start)
+    networks.active_provider.mine()
+    gate_seal.prolong_lifetime(sender=sealing_committee)
+    assert not gate_seal.is_in_prolongation_window()
+    new_expiry = initial_expiry + prolongation_extension
+    new_window_start = (
+        new_expiry
+        - gate_seal.get_expiration_buffer_seconds()
+        - gate_seal.get_prolongation_window_seconds()
+    )
+    networks.active_provider.set_timestamp(new_window_start)
+    networks.active_provider.mine()
+    assert gate_seal.is_in_prolongation_window()
+
+
+def test_max_lifetime_seconds_is_prolongation_extension_times_two(
+    deploy_gate_seal, now
+):
+    gate_seal = deploy_gate_seal()
+    prolongation_extension = gate_seal.get_prolongation_extension_seconds()
+    excessive_expiry_offset = prolongation_extension * 2 + 10
+    with pytest.raises(VirtualMachineError, match="expiry timestamp: exceeds max"):
+        deploy_gate_seal(expiry_timestamp_=now() + excessive_expiry_offset)
+    limit_expiry_offset = prolongation_extension * 2
+    gate_seal_at_limit = deploy_gate_seal(expiry_timestamp_=now() + limit_expiry_offset)
+    deployed_expiry = gate_seal_at_limit.get_expiry_timestamp()
+    expected_expiry = now() + limit_expiry_offset
+    assert (
+        abs(deployed_expiry - expected_expiry) <= 1
+    ), f"Expected {expected_expiry}, got {deployed_expiry}"
