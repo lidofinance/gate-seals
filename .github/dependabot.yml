@@ -26,6 +26,8 @@ updates:
     groups:
       python:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "vyper"
     labels: ["dependencies", "python"]
     commit-message:
       prefix: "build"
