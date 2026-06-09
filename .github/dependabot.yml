@@ -9,6 +9,9 @@ updates:
     groups:
       javascript:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "hardhat"
+        update-types: ["version-update:semver-major"]
     labels: ["dependencies", "javascript"]
     commit-message:
       prefix: "build"
@@ -23,6 +26,8 @@ updates:
     groups:
       python:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "vyper"
     labels: ["dependencies", "python"]
     commit-message:
       prefix: "build"
