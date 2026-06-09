@@ -1,5 +1,8 @@
 # GateSeal ⛩️
 
+> [!IMPORTANT]
+> **This repository is archived and no longer maintained.** Development has moved to its successor, [circuit-breaker](https://github.com/lidofinance/circuit-breaker).
+
 A one-time panic button for pausable contracts.
 
 ![](/assets/monty-python.png)
